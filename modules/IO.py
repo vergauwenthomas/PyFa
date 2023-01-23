@@ -27,3 +27,8 @@ def write_to_csv(data, filepath):
     else:
         data = pd.DataFrame(data)
         data.to_csv(filepath,  index=False)
+        
+        
+        
+        
+    
