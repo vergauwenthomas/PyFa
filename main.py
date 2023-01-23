@@ -22,10 +22,18 @@ sys.path.append(main_path)
 
 # %%
 
-parser = argparse.ArgumentParser(description='FA plotting')
-parser.add_argument("-p", "--plot", help="Make plot",
-                    default=True, action="store_true")
-parser.add_argument("--print_fields", help="print available fields (T/F)",
+parser = argparse.ArgumentParser(description='FA plotting as a python wrapper',
+                                 epilog='''
+                                            Add kwargs as you like as arguments. The position of these arguments is not of importance.
+                                            These will be added to the plot functions (matplotlib). 
+                                            Example: .... vmin=288 vmax=294 cmap=?? ... '''
+                                 )
+
+parser.add_argument("file", help="FA filename of path.", default='') #argument without prefix
+
+# parser.add_argument("-p", "--plot", help="Make plot",
+#                     default=True, action="store_true")
+parser.add_argument("--print_fields", help="print available fields",
                     default=False, action="store_true")
 parser.add_argument("-f", "--file", help="FA filename of path.", default='')
 parser.add_argument("--field", help="fieldname", default='SFX.T2M')
@@ -35,6 +43,8 @@ parser.add_argument(
     "--proj", help="Reproject to this crs (ex: epsg:4326)", default='EPSG:4326')
 parser.add_argument("--save", help="Save plot to file",
                     default=False, action='store_true')
+
+parser.add_argument('kwargs', help='Extra arguments passed to the plot function.', nargs='*')
 
 args = parser.parse_args()
 
@@ -137,10 +147,18 @@ data = to_xarray.json_to_rioxarray(json_path=json_path,
 
 shutil.rmtree(tmpdir)
 
+
+# =============================================================================
+# Check for plotting kwargs
+# =============================================================================
+kwargs = IO.make_kwarg_dict(args.kwargs)
+
+
 # =============================================================================
 # make plot
 # =============================================================================
-print(data.attrs['origin'])
+
+
 if args.save:
     # make output filepath
     origin = data.attrs['origin']
@@ -159,6 +177,7 @@ fig, axs = plotting.make_fig()
 plotting.make_plot(dxr=data,
                    ax=axs,
                    #TODO pass arguments as kwargs
+                   **kwargs
                    )
 
 if args.save:
@@ -166,6 +185,3 @@ if args.save:
 
 
 plt.show()
-
-
-
