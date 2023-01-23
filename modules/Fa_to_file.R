@@ -36,6 +36,18 @@ print(filename)
 #-------------------Open geofield ------------------------------------
 
 x = Rfa::FAopen(filename)
+
+# ----------------- Write available fields to file -----------------
+
+avail_fields = x$list
+sink(file.path(outputdir, "fields.json"))
+cat(toJSON(avail_fields))
+sink()
+
+
+
+
+# ----------------Extract field -----------------------------
 y = FAdec(x, field)
 
 # -----------------Extract Projection info -----------------------------

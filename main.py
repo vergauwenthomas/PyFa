@@ -6,18 +6,26 @@ Created on Fri Jan 20 16:29:28 2023
 @author: thoverga
 """
 
-import os, shutil
+import os, sys, shutil
 import argparse
-import to_xarray
+import json
+
 import subprocess
 import xarray 
 import matplotlib.pyplot as plt
 
+main_path = os.path.dirname(__file__)
+sys.path.append(main_path)
+from modules import to_xarray, plotting, IO
+
+#%%
+
 parser = argparse.ArgumentParser(description='FA plotting')
 parser.add_argument("-p","--plot", help="Make plot", default=True, action="store_true")
 parser.add_argument("--print_fields", help="print available fields (T/F)", default=False, action="store_true")
-parser.add_argument("--file", help="FA filename of path.", default='')
+parser.add_argument("-f", "--file", help="FA filename of path.", default='')
 parser.add_argument("--field", help="fieldname", default='SFX.T2M')
+parser.add_argument("--get_fieldnames", help="Write fieldnames to a file in the cwd.", default=False, action="store_true")
 parser.add_argument("--proj", help="Reproject to this crs (ex: epsg:4326)", default='EPSG:4326')
 parser.add_argument("--save", help="Save plot to file", default=False, action='store_true')
 
@@ -46,7 +54,7 @@ assert os.path.isfile(fa_file), f'{args.file} not found.'
 # =============================================================================
 
 #1  create tmp workdir 
-tmpdir=os.path.join(os.getcwd(),'tmp')
+tmpdir=os.path.join(os.getcwd(),'tmp_fajson')
 tmpdir_available=False
 while tmpdir_available == False:
     if os.path.exists(tmpdir): #Do not overwrite if this dir exists already
@@ -57,8 +65,52 @@ while tmpdir_available == False:
 os.makedirs(tmpdir)
 
 # Launch Rfa to convert FA to json
-subprocess.call (["/usr/bin/Rscript", f'/home/thoverga/Documents/github/PyFa/Fa_to_file.R',fa_file, args.field, tmpdir])
+r_script = os.path.join(main_path, 'modules', 'Fa_to_file.R')
+subprocess.call (["/usr/bin/Rscript", r_script, fa_file, args.field, tmpdir])
 
+# =============================================================================
+# Paths to output
+# =============================================================================
+json_path = os.path.join(tmpdir, 'FAdata.json')
+fields_json_path = os.path.join(tmpdir, 'fields.json')
+
+# =============================================================================
+# Write fieldnames info to file if needed
+# =============================================================================
+
+if args.get_fieldnames:
+    # fieldnames json is alway created, convert them to csv and write in cwd
+    all_fields_csv_path = os.path.join(os.getcwd(), 'fieldnames.csv')
+    fielddata = IO.read_json(jsonpath=fields_json_path,
+                            to_dataframe=True)
+    IO.write_to_csv(fielddata, all_fields_csv_path)
+    print(f'All available fields are writen to {all_fields_csv_path}.')
+        
+
+
+
+
+# =============================================================================
+# check if json file is created
+# =============================================================================
+
+if not os.path.isfile(json_path):
+    print(f'{args.field} not found in {fa_file}.')
+    
+    # print available fields
+    fieldsdf = IO.read_json(jsonpath=fields_json_path,
+                            to_dataframe=True)
+    
+    if fieldsdf.shape[0] > 100:
+        fieldsdf = fieldsdf[0:100]
+        print(f'There are {fieldsdf.shape[0]} stored in the {fa_file}. Here are the first 100 fields:')
+    else:
+        print(f'There are {fieldsdf.shape[0]} stored in the {fa_file}:')
+    print(fieldsdf)
+    print('To list all fields, add the --get_fieldnames argument so that all fieldnames will be writen to file.')
+
+    shutil.rmtree(tmpdir)
+    sys.exit(f'{args.field} not found in {fa_file}.')
 
 
 
@@ -71,7 +123,7 @@ if args.proj == '':
 else: 
     reproj_bool=True
 
-data = to_xarray.json_to_rioxarray(json_path=os.path.join(tmpdir, 'FAdata.json'), 
+data = to_xarray.json_to_rioxarray(json_path=json_path, 
                                    reproject=reproj_bool,
                                    target_epsg=args.proj)
 
@@ -100,10 +152,22 @@ if args.save:
 
 
 fig, axs = plt.subplots()
-data.plot(ax=axs)
+axs = plotting.make_plot(dxr=data,
+                         ax=axs, 
+                         contour=False)
 
 if args.save:
-    plt.savefig(filepath)
+    plotting.save_plot(fig=fig, filepath=filepath, fmt='png')
 
 
 plt.show()
+
+
+
+
+
+
+
+
+
+

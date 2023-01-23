@@ -14,6 +14,8 @@ import os
 import json
 import rasterio
 
+from . import IO
+
 
 
 json_file_path = '/home/thoverga/Documents/github/PyFa/FAdata.json'
@@ -29,9 +31,7 @@ def json_to_rioxarray(json_path, reproject=True, target_epsg="EPSG:4326"):
     # =============================================================================
     
     # Opening JSON file
-    f = open(json_path)
-    data = json.load(f)
-    
+    data = IO.read_json(json_path)
     
     # =============================================================================
     # Data to xarray
