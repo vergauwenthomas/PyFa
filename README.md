@@ -15,16 +15,21 @@ There are two ways to use the PyFa package:
 
 
 ## Installing the python package
-
+For the most stable versions, use the version on [testPyPI](https://test.pypi.org/project/pyfa/). Install this with:
+```bash
+pip3 install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple pyfa --upgrade
+```
 
 
 
 ## Setup the shell commands
-To use this package as a shell command, run the setup_shell_commands.py
+To use this package as a shell command, execute following python code only once:
 
-```bash
-python3 setup_shell_commands.py
+```python
+import pyfa
+pyfa.setup_shell_command()
 ```
+Restart a terminal, and you are ready to go.
 This file will add the `pyfa` alias to your `~\.bashrc` file, and will propagate arguments to the python package. 
 
 
