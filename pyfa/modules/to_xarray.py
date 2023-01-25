@@ -18,14 +18,9 @@ from . import IO
 
 
 
-json_file_path = '/home/thoverga/Documents/github/PyFa/FAdata.json'
-
-
 
 def json_to_rioxarray(json_path, reproject=True, target_epsg="EPSG:4326"):
     
-    print('reproject: ', reproject)
-    print('epsg: ', target_epsg)
     # =============================================================================
     #  Read json file
     # =============================================================================

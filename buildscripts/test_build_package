@@ -1,0 +1,27 @@
+#!/usr/bin/bash
+
+
+#Get current conda env, and change back to it after the test
+current_conda=$CONDA_DEFAULT_ENV
+
+
+
+#Create a dummy environment
+conda deactivate
+conda create --name test-env python=3.9
+conda activate test-env
+
+
+#Install build package 
+cd ..
+pip install dist/pyfa-*.tar.gz
+
+#run tests
+python tests/package_tests.py
+
+
+#Back to initial conda env
+conda deactivate
+conda activate ${current_conda}
+
+

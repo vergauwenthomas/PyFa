@@ -6,7 +6,7 @@ FA_files/
 dist/
 poetry.lock
 
-
+tests/data/*
 
 *.png
 *.pdf

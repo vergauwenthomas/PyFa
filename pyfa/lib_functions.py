@@ -20,10 +20,59 @@ def setup_shell_command():
     from .modules import setup_shell_commands
     
     
-def get_fieldnames():
-    print('TODO')
+def get_fields(fa_filepath):
+    """
+    Get all the fields from an FA file.
+
+    Parameters
+    ----------
+    fa_filepath : Str
+        Path to the FA-file.
+
+    Returns
+    -------
+    fielddata : pandas.DataFrame
+        Available fields information.
+
+    """
     
-def FA_to_Xarray(fa_filepath, fieldname='SFX.T2M', target_crs='EPSG:4326'):
+    json_path, fields_json_path, tmpdir = _Fa_to_json(fafile=fa_filepath,
+                                                      fieldname='_dummy')
+    
+    
+    fielddata = IO.read_json(jsonpath=fields_json_path, to_dataframe=True)
+    
+    shutil.rmtree(tmpdir)
+    return fielddata
+    
+    
+    
+    
+def _Fa_to_json(fafile, fieldname):
+    """
+    This function will launch an R script, that uses Rfa to extract a field from an FA file. 
+    The data is writen to a json, that is temporarely stored in a tmp folder. 
+    
+    The return are the paths to relevant locations (json files and tmp folder).
+
+
+    Parameters
+    ----------
+    fafile : Str
+        Path to the FA-file.
+    fieldname : Str
+        Name of the spatial field to extract from the FA file.
+
+    Returns
+    -------
+    json_path : Str
+        Path to the json containing the data.
+    fields_json_path : Str
+        Path to the json containing the available fields in the FA file.
+    tmpdir : Str
+        Path of the temp direcotry where the jsons are stored.
+
+    """
     
     # 1  create tmp workdir
     tmpdir = os.path.join(os.getcwd(), 'tmp_fajson')
@@ -36,10 +85,10 @@ def FA_to_Xarray(fa_filepath, fieldname='SFX.T2M', target_crs='EPSG:4326'):
     
     os.makedirs(tmpdir)
     
-
+    
     # Launch Rfa to convert FA to json
     r_script = os.path.join(main_path, 'modules', 'Fa_to_file.R')
-    subprocess.call(["/usr/bin/Rscript", r_script, fa_filepath, fieldname, tmpdir])
+    subprocess.call(["/usr/bin/Rscript", r_script, fafile, fieldname, tmpdir])
     
     # =============================================================================
     # Paths to output
@@ -47,17 +96,37 @@ def FA_to_Xarray(fa_filepath, fieldname='SFX.T2M', target_crs='EPSG:4326'):
     json_path = os.path.join(tmpdir, 'FAdata.json')
     fields_json_path = os.path.join(tmpdir, 'fields.json')
     
-    # =============================================================================
-    # Write fieldnames info to file if needed
-    # =============================================================================
+    return json_path, fields_json_path, tmpdir
+
+
+
+
     
-    # if args.get_fieldnames:
-    #     # fieldnames json is alway created, convert them to csv and write in cwd
-    #     all_fields_csv_path = os.path.join(os.getcwd(), 'fieldnames.csv')
-    #     fielddata = IO.read_json(jsonpath=fields_json_path,
-    #                              to_dataframe=True)
-    #     IO.write_to_csv(fielddata, all_fields_csv_path)
-    #     print(f'All available fields are writen to {all_fields_csv_path}.')
+def FA_to_Xarray(fa_filepath, fieldname='SFX.T2M', target_crs='EPSG:4326'):
+    """
+    This function imports a field from an FA file into an Xarray.DataArray. If needed,
+    the data is reprojected to another CRS.
+
+    Parameters
+    ----------
+    fa_filepath : Str
+        Path to the FA-file.
+    fieldname : TYPE, optional
+        Name of the spatial field to extract from the FA file. The default is 'SFX.T2M'.
+    target_crs : Str, optional
+        EPSG identifier for the target CRS. The data will be reprojected to this if needed. The default is 'EPSG:4326'.
+
+    Returns
+    -------
+    data : Xarray.DataArray
+        A DataArray containing the data in the target_crs. Meta data + CRS info is added to the data.attrs.
+
+    """
+    
+    json_path, fields_json_path, tmpdir = _Fa_to_json(fafile=fa_filepath,
+                                              fieldname=fieldname)
+    
+
     
     # =============================================================================
     # check if json file is created
@@ -77,7 +146,7 @@ def FA_to_Xarray(fa_filepath, fieldname='SFX.T2M', target_crs='EPSG:4326'):
         else:
             print(f'There are {fieldsdf.shape[0]} stored in the {fa_filepath}:')
         print(fieldsdf)
-        print('To list all fields, add the --get_fieldnames argument so that all fieldnames will be writen to file.')
+        print('To get all fields, use the get_fields() function.')
     
     
         #TODO: define errors
@@ -94,4 +163,6 @@ def FA_to_Xarray(fa_filepath, fieldname='SFX.T2M', target_crs='EPSG:4326'):
     data = to_xarray.json_to_rioxarray(json_path=json_path,
                                        reproject=reproj_bool,
                                        target_epsg=target_crs)
+    
+    shutil.rmtree(tmpdir)
     return data

@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+
+#1 execute tests before building the package
+
+
+#Use poetry to make dependencies (https://python-poetry.org/docs/basic-usage/)
+export PATH="/home/thoverga/.local/bin:${PATH}" #for poetry
+poetry add pandas
+poetry add numpy
+poetry add matplotlib
+poetry add geopandas
+poetry add xarray
+poetry add rioxarray
+
+
+#2 Build the package
+
+
+
+
+echo "Removing old builds before building the package ..."
+cd ..
+cd dist
+rm *.whl
+rm *.tar.gz
+cd ..
+
+echo "Make build ..."
+python3 -m build
+
