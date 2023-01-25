@@ -15,34 +15,7 @@ There are two ways to use the PyFa package:
 * Use this as a python package to convert FA to Xarray, and make your own analysis
 * Use this as backand for shell commands to make some basic visualisations. 
 
-
-## Installing the python package
-For the most stable versions, use the version on [testPyPI](https://test.pypi.org/project/pyfa/). Install this with:
-```bash
-pip3 install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple pyfa --upgrade
-```
-
-
-
-## Setup the shell commands
-To use this package as a shell command, execute following python code only once:
-
-```python
-import pyfa
-pyfa.setup_shell_command()
-```
-Restart a terminal, and you are ready to go.
-This file will add the `pyfa` alias to your `~\.bashrc` file, and will propagate arguments to the python package. 
-
-
-## Shell Usage
-The FA file, and some settings are given throug arguments ex.:
-```bash
-pyfa FA_file --print_fields --proj=EPSG:4326 --save
-```
-
-To see all possible arguements run `pyfa -h`. (Don't forget to setup the shell commands first)
- ## Python package usage
+### Python package usage
  To use PyFa as a package, import it and try the available functions:
  
  ```python
@@ -61,5 +34,25 @@ dxr = pyfa.FA_to_Xarray(fa_filepath=path_to_fa_file,
 print(dxr) #Don' panic if you see Nan's in the data, this is often so for the corners because of reprojecting.
 dxr.plot() #Matplotlib backend
 ```
+ 
+
+### Setup the shell commands
+To use this package as a shell command, execute following python code only once:
+
+```python
+import pyfa
+pyfa.setup_shell_command()
+```
+Restart a terminal, and you are ready to go.
+This file will add the `pyfa` alias to your `~\.bashrc` file, and will propagate arguments to the python package. 
+
+
+## Shell Usage
+The FA file, and some settings are given throug arguments ex.:
+```bash
+pyfa FA_file --print_fields --proj=EPSG:4326 --save
+```
+
+To see all possible arguements run `pyfa -h`. (Don't forget to setup the shell commands first)
  
  
