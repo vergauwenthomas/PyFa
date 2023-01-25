@@ -1,0 +1,17 @@
+#!/usr/bin/bash
+
+#Create a dummy environment
+conda deactivate
+conda create --name test-env python=3.9
+conda activate test-env
+
+
+#Donwload and install pyfa
+pip3 install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple pyfa --upgrade
+
+# Do some testing ....
+
+
+#Remove environment
+#conda deactivate
+#conda env remove -n test-env
