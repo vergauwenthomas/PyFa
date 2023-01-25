@@ -2,11 +2,13 @@
 Python wrapper on Rfa using [Xarray](https://docs.xarray.dev/en/stable/). The goal of this package is to import FA files into Xarray and provide basic and user friendly commands for visualising FA files.  
 
 
-## Required software
+## Required software and install
 This package is developed for Linux distributions with a Python3 installation. In addition, R should be installed and the [Rfa](https://gitlab-me.oma.be/aladin/Rfa) (RMI-vpn required), [meteogrid](https://github.com/harphub/meteogrid) libraries as well. 
 
-(This software is available in the modules on the RMI servers).
-
+For the most stable versions, use the version on [testPyPI](https://test.pypi.org/project/pyfa/). Install this with:
+```bash
+pip3 install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple pyfa --upgrade
+```
 
 ## Setup
 There are two ways to use the PyFa package:
