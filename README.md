@@ -33,15 +33,31 @@ Restart a terminal, and you are ready to go.
 This file will add the `pyfa` alias to your `~\.bashrc` file, and will propagate arguments to the python package. 
 
 
-## Usage
+## Shell Usage
 The FA file, and some settings are given throug arguments ex.:
-```bash
-main.py FA_file --print_fields --proj=EPSG:4326 --save
-```
-or using the shell command:
-
 ```bash
 pyfa FA_file --print_fields --proj=EPSG:4326 --save
 ```
 
-To see all possible arguements run `pyfa -h`.
+To see all possible arguements run `pyfa -h`. (Don't forget to setup the shell commands first)
+ ## Python package usage
+ To use PyFa as a package, import it and try the available functions:
+ 
+ ```python
+import pyfa
+
+# Get available fields
+fielddf = pyfa.get_fields(fa_filepath=path_to_fa_file)
+print(fielddf) #Note that not all rows are printed (default pandas settings). 
+
+
+# convert to an Xarray.DataArray
+dxr = pyfa.FA_to_Xarray(fa_filepath=path_to_fa_file,
+                  fieldname='SURFTEMPERATURE',
+                  target_crs='EPSG:4326')
+# info and plotting:
+print(dxr) #Don' panic if you see Nan's in the data, this is often so for the corners because of reprojecting.
+dxr.plot() #Matplotlib backend
+```
+ 
+ 
