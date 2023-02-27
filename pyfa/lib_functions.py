@@ -47,6 +47,29 @@ def get_fields(fa_filepath):
     
     
     
+def get_rbin():
+    """Funtion to extract the Rbin of your environment"""
+    #Write very simple R script in curdir
+    r_miniscript = os.path.join(os.getcwd(), 'mini_R_script.R')
+    with open(r_miniscript, 'w') as f:
+        f.write('R.home("bin")')
+    
+    
+    #Execure script and extract the rbin    
+    result = subprocess.run(['Rscript', r_miniscript], capture_output=True, text=True)
+    rbin = result.stdout.split('"')[1]
+    
+    
+    #Delete basic r script
+    
+    try:
+        os.remove(r_miniscript)
+    except OSError:
+        pass
+
+    return rbin
+    
+    
     
 def _Fa_to_json(fafile, fieldname):
     """
@@ -88,7 +111,12 @@ def _Fa_to_json(fafile, fieldname):
     
     # Launch Rfa to convert FA to json
     r_script = os.path.join(main_path, 'modules', 'Fa_to_file.R')
-    subprocess.call(["/usr/bin/Rscript", r_script, fafile, fieldname, tmpdir])
+    
+    #Locate the R bin on your system and lauch the Rscript
+    rbin = get_rbin()
+    subprocess.call([os.path.join(rbin, 'Rscript'), r_script, fafile, fieldname, tmpdir])
+    
+    
     
     # =============================================================================
     # Paths to output

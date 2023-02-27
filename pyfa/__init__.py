@@ -6,4 +6,6 @@ Created on Mon Jan 23 17:20:08 2023
 @author: thoverga
 """
 
-from .lib_functions import setup_shell_command, FA_to_Xarray, get_fields
+# from .lib_functions import setup_shell_command, FA_to_Xarray, get_fields
+
+from .lib_functions import get_fields, FA_to_Xarray, setup_shell_command

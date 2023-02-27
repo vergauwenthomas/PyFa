@@ -1,30 +1,64 @@
 #!/usr/bin/env bash
 
+
+DEPLOY_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+
+cd ${DEPLOY_DIR}
+cd .. #Navigate to workdir
+
+WORKDIR=$(pwd)
+DISTDIR=${WORKDIR}/dist
+TESTDIR=${WORKDIR}/tests 
 #1 execute tests before building the package
 
 
-#Use poetry to make dependencies (https://python-poetry.org/docs/basic-usage/)
-export PATH="/home/thoverga/.local/bin:${PATH}" #for poetry
-poetry add pandas
-poetry add numpy
-poetry add matplotlib
-poetry add geopandas
-poetry add xarray
-poetry add rioxarray
 
 
-#2 Build the package
+#2 install the package using poetry
+
+poetry update #to update the poetry.lock with the latest versions of the depending packages 
+poetry install 
 
 
-
+#3 build the package
 
 echo "Removing old builds before building the package ..."
-cd ..
-cd dist
+cd ${DISTDIR}
 rm *.whl
 rm *.tar.gz
-cd ..
+
+
 
 echo "Make build ..."
-python3 -m build
+cd ${WORKDIR}
+poetry build
 
+
+
+
+
+
+#Use poetry to make dependencies (https://python-poetry.org/docs/basic-usage/)
+#export PATH="/home/thoverga/.local/bin:${PATH}" #for poetry
+#poetry add pandas
+#poetry add numpy
+#poetry add matplotlib
+#poetry add geopandas
+#poetry add xarray
+#poetry add rioxarray
+
+
+
+
+
+#Run tests in package space
+
+cd ${TESTDIR}
+
+poetry run python package_tests.py
+
+
+
+
+
+cd ${WORKDIR}
