@@ -9,6 +9,25 @@ For the most stable versions, use the version on [testPyPI](https://test.pypi.or
 ```bash
 pip3 install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple pyfa --upgrade
 ```
+### Installing on the VSC
+Some super-computers (like the VSC) anaconda is discouraged and incompatible with modules.
+Read the [documentation](https://docs.vscentrum.be/software/python_package_management.html#installing-packages-using-pip) on how to install packages alongside modules. 
+
+Load modules containing meteo-grid.
+```bash
+module load foss/2022a R/4.2.1-foss-2022a
+```
+
+Then install without dependencies (as these will be present in the modules):
+```bash
+pip3 install --prefix="${VSC_DATA}/python_lib" --no-deps --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple pyfa --upgrade
+```
+
+Now add the Python package to the Python path. This will need to be repeated on login.
+```bash
+export PYTHONPATH="${VSC_DATA}/python_lib/lib/python3.10/site-packages/:${PYTHONPATH}"
+```
+Add this to your .bashrc to avoid this. Note that your python version may be different. 
 
 ## Setup
 There are two ways to use the PyFa package:
