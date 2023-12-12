@@ -1,6 +1,6 @@
 [tool.poetry]
-name = "pyfa"
-version = "0.0.1alpha"
+name = "PyFa"
+version = "0.0.1a0"
 description = "A python wrapper on RFa for FA files using Xarray"
 authors = ["Thomas Vergauwen <thomas.vergauwen@meteo.be>",
            "Kobe Vandelanotte <kobe.Vandelanotte@meteo.be>",
