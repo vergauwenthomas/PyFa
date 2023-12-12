@@ -1,8 +1,11 @@
 [tool.poetry]
 name = "pyfa"
-version = "0.1.6"
-description = "A python wrapper on RFa for plotting and loading FA files with Xarray"
-authors = ["Thomas Vergauwen <thomas.vergauwen@meteo.be>"]
+version = '0.0.1alpha'
+description = "A python wrapper on RFa for FA files using Xarray"
+authors = ["Thomas Vergauwen <thomas.vergauwen@meteo.be>",
+           "Kobe Vandelanotte <kobe.Vandelanotte@meteo.be>",
+           "Wout Dewettinck <kobe.Vandelanotte@meteo.be>"]
+
 readme = "README.md"
 
 [tool.poetry.dependencies]
