@@ -9,7 +9,7 @@ Created on Tue Jan 24 14:07:00 2023
 import os
 
 main_path = os.path.dirname(__file__)
-executor_file = os.path.join(main_path, 'bash_executor.sh')
+executor_file = os.path.join(main_path, '../../bash_executor.sh')
 
 
 # Append to Bashrc
