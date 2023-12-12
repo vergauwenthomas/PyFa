@@ -10,7 +10,7 @@ For the most stable versions, use the version on [testPyPI](https://test.pypi.or
 pip3 install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple pyfa --upgrade
 ```
 ### Installing on the VSC
-Some super-computers (like the VSC) anaconda is discouraged and incompatible with modules.
+On some super-computers (like the VSC) anaconda is discouraged and incompatible with modules.
 Read the [documentation](https://docs.vscentrum.be/software/python_package_management.html#installing-packages-using-pip) on how to install packages alongside modules. 
 
 Load modules containing meteo-grid.
