@@ -11,7 +11,6 @@ from pathlib import Path
 
 executor_directory = Path(__file__).resolve().parents[1]
 file = executor_directory / 'bash_executor.sh'
-print(file)
 
 # Append to Bashrc
 file = os.path.join(os.getenv('HOME'), '.bashrc')
