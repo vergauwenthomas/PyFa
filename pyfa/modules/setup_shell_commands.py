@@ -10,7 +10,7 @@ import os
 from pathlib import Path
 
 executor_directory = Path(__file__).resolve().parents[1]
-file = os.path.join(executor_directory, 'bash_executor.sh')
+executor_file = os.path.join(executor_directory, 'bash_executor.sh')
 
 # Append to Bashrc
 file = os.path.join(os.getenv('HOME'), '.bashrc')
