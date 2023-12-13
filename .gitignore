@@ -11,3 +11,9 @@ tests/data/*
 *.png
 *.pdf
 
+
+buildscripts/deploy_to_pypi
+
+
+.spyproject
+development/*
