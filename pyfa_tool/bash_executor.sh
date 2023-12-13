@@ -14,7 +14,7 @@
 ## ----------------------- Create PyFA path
 
 PYFA_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-main="${PYFA_DIR}/src/pyfa_tool/main.py"
+main="${PYFA_DIR}/main.py"
 
 ## ---------------------- PASS ARGUMENTS ------------------
 python ${main} "$@"

@@ -23,10 +23,9 @@ else:
     file1.write("\n")
     file1.write("\n")
     file1.write("# <<<  PyFa  >>> \n")
-    file1.write(f'PYFY_BASH="{executor_file}"\n')
-    file1.write('alias pyfa="source ${PYFY_BASH} "$@""')
+    file1.write(f'PYFA_BASH="{executor_file}"\n')
+    file1.write('alias pyfa="source ${PYFA_BASH} "$@""')
     file1.close()
 
-    print('Done! pyfy is now a shell command.')
+    print('Done! pyfa is now a shell command.')
     print('Try it out: pyfa -h')
-    
