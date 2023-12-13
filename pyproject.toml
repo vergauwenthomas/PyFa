@@ -1,12 +1,14 @@
 [tool.poetry]
-name = "PyFa"
+name = "PyFa-tool"
 version = "0.0.1a0"
 description = "A python wrapper on RFa for FA files using Xarray"
 authors = ["Thomas Vergauwen <thomas.vergauwen@meteo.be>",
            "Kobe Vandelanotte <kobe.Vandelanotte@meteo.be>",
            "Wout Dewettinck <kobe.Vandelanotte@meteo.be>"]
-
+maintainers = ["Thomas Vergauwen <thomas.vergauwen@meteo.be>"]
 readme = "README.md"
+
+
 
 [tool.poetry.dependencies]
 python = "^3.9"
@@ -16,6 +18,10 @@ matplotlib = "^3.6.3"
 geopandas = "^0.12.2"
 xarray = "^2023.1.0"
 rioxarray = "^0.13.3"
+
+[tool.poetry.group.dev.dependencies]
+#Group of dep packages for development
+poetry = '^1.7'
 
 
 [build-system]
