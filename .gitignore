@@ -16,3 +16,4 @@ buildscripts/deploy_to_pypi
 
 
 .spyproject
+development/*
