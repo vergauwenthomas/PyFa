@@ -40,6 +40,7 @@ x = Rfa::FAopen(filename)
 # ----------------- Write available fields to file -----------------
 
 avail_fields = x$list
+
 sink(file.path(outputdir, "fields.json"))
 cat(toJSON(avail_fields))
 sink()
@@ -48,7 +49,13 @@ sink()
 
 
 # ----------------Extract field -----------------------------
-y = FAdec(x, field)
+if (field %in% avail_fields$name){
+    y = FAdec(x, field)
+}else{
+    backup_field = avail_fields$name[1]
+    y = FAdec(x, backup_field)
+}
+
 
 # -----------------Extract Projection info -----------------------------
 
@@ -80,19 +87,25 @@ metainfo[['center_lon']] = attr(y, "domain")$clonlat[1]
 metainfo[['center_lat']] = attr(y, "domain")$clonlat[2]
 
 
-#coordinates
+# --------------- write meta to file --------------------
+exportJSON <- toJSON(metainfo)
+write(exportJSON, file.path(outputdir, "FAmetadata.json"))
 
+
+
+# -----------------Extract Data info -----------------------------
+
+#coordinates
+datainfo <- vector(mode="list")
 #check if x and y are chosing correctly and not verwisseld
 coords = DomainPoints(y, type="xy")
-metainfo[['ycoords']] = as.numeric(data.frame(coords[2])[12,]) #select an arbirary row
-metainfo[['xcoords']] = as.numeric(data.frame(coords[1])[,12]) #select an arbirary column
+datainfo[['ycoords']] = as.numeric(data.frame(coords[2])[12,]) #select an arbirary row
+datainfo[['xcoords']] = as.numeric(data.frame(coords[1])[,12]) #select an arbirary column
+datainfo[['data']] = y[]
 
-
-metainfo[['data']] = y[]
-
-
-
-# --------------- write to file --------------------
-exportJSON <- toJSON(metainfo)
+exportJSON <- toJSON(datainfo)
 write(exportJSON, file.path(outputdir, "FAdata.json"))
+
+
+
 
