@@ -3,7 +3,9 @@ Python wrapper on Rfa using [Xarray](https://docs.xarray.dev/en/stable/). The go
 
 
 ## Required software and install
-This package is developed for Linux distributions with a Python3 installation. In addition, R should be installed and the [Rfa](https://gitlab-me.oma.be/aladin/Rfa) (RMI-vpn required), [meteogrid](https://github.com/harphub/meteogrid) libraries as well.
+
+This package is developed for Linux distributions with a Python3 installation. In addition, R should be installed and the [Rfa](https://github.com/harphub/Rfa) library as well.
+
 
 For the most stable versions use the github main, or use the version on [PyPI](https://pypi.org/project/PyFa-tool/). Install this with:
 ```bash

@@ -18,5 +18,3 @@ main="${PYFA_DIR}/src/pyfa_tool/main.py"
 
 ## ---------------------- PASS ARGUMENTS ------------------
 python ${main} "$@"
-
-
