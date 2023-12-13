@@ -12,9 +12,9 @@ conda create --name test-env python=3.9
 conda activate test-env
 
 
-#Install build package 
+#Install build package
 cd ..
-pip install dist/pyfa-*.tar.gz
+pip install dist/pyfa_tool-*.tar.gz
 
 #run tests
 python tests/package_tests.py

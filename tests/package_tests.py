@@ -7,7 +7,7 @@ Created on Wed Jan 25 09:16:18 2023
 """
 
 
-import pyfa
+import pyfa_tool as pyfa
 
 # =============================================================================
 # Setup shell commands

@@ -19,6 +19,7 @@ TESTDIR=${WORKDIR}/tests
 poetry update #to update the poetry.lock with the latest versions of the depending packages 
 poetry install 
 
+poetry show
 
 #3 build the package
 
@@ -32,10 +33,6 @@ rm *.tar.gz
 echo "Make build ..."
 cd ${WORKDIR}
 poetry build
-
-
-
-
 
 
 #Use poetry to make dependencies (https://python-poetry.org/docs/basic-usage/)
