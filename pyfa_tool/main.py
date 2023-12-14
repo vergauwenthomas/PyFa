@@ -11,11 +11,6 @@ import os
 import sys
 import shutil
 import argparse
-# import json
-# from modules import to_xarray, plotting, IO
-# import subprocess
-# # import xarray
-# import matplotlib.pyplot as plt
 
 main_path = os.path.dirname(__file__)
 sys.path.append(main_path)
