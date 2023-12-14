@@ -19,6 +19,15 @@ from . import IO
 
 
 
+
+def _field_exists(fieldname, field_json_path):
+    """Test if a fieldname is FA file."""
+    nameseries = IO.read_json(field_json_path, True)['name']
+    nameseries = nameseries.apply(lambda x: x.strip())
+    return (fieldname in nameseries.to_list())
+
+
+
 def json_to_rioxarray(json_data_path, json_metadata_path, reproject=True, target_epsg="EPSG:4326"):
 
     # =============================================================================

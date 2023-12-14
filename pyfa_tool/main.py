@@ -161,21 +161,19 @@ The following functionality is available:
         # =============================================================================
         # Test if field exists
         # =============================================================================
-        if not os.path.isfile(json_data_path):
+        print(f'args fieldname: {args.field}')
+        fieldexists=to_xarray._field_exists(fieldname=args.field,
+                                            field_json_path=fields_json_path)
+        if not fieldexists:
             print(f'{args.field} not found in {fa_file}.')
 
-            # print available fields
+            # # print available fields
             fieldsdf = IO.read_json(jsonpath=fields_json_path,
                                     to_dataframe=True)
-
-            if fieldsdf.shape[0] > 100:
-                fieldsdf = fieldsdf[0:100]
-                print(
-                    f'There are {fieldsdf.shape[0]} stored in the {fa_file}. Here are the first 100 fields:')
-            else:
-                print(f'There are {fieldsdf.shape[0]} stored in the {fa_file}:')
-            print(fieldsdf)
-            print('To list all fields, add the --get_fieldnames argument so that all fieldnames will be writen to file.')
+            n = 10
+            print(f'A total of {fieldsdf.shape[0]} fiels are found, here are the first {n}: \n')
+            print(fieldsdf['name'].to_list()[:n])
+            print('To list all fields, use the -d (--describe) argument.')
 
             shutil.rmtree(tmpdir)
             sys.exit(f'{args.field} not found in {fa_file}.')

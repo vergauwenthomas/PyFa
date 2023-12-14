@@ -46,10 +46,8 @@ cat(toJSON(avail_fields))
 sink()
 
 
-
-
 # ----------------Extract field -----------------------------
-if (field %in% avail_fields$name){
+if (field %in% trimws(avail_fields$name)){
     y = FAdec(x, field)
 }else{
     backup_field = avail_fields$name[1]
