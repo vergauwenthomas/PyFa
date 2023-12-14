@@ -86,6 +86,22 @@ metainfo[['ey']] = attr(y, "domain")$ey
 metainfo[['center_lon']] = attr(y, "domain")$clonlat[1]
 metainfo[['center_lat']] = attr(y, "domain")$clonlat[2]
 
+# ------------------ Extract attributes of FA (not field) ------------------
+metainfo[['nfields']] = attr(x, 'nfields')
+metainfo[['filepath']] = attr(x, 'filename')
+
+#spectral settings
+metainfo[['ndlux']] = attr(x, 'frame')$ndlux
+metainfo[['ndgux']] = attr(x, 'frame')$ndgux
+metainfo[['nsmax']] = attr(x, 'frame')$nsmax
+
+#vertical settings
+metainfo[['nlev']] = attr(x, 'frame')$nlev
+metainfo[['refpressure']] = attr(x, 'frame')$levels$refpressure
+metainfo[['A_list']] = attr(x, 'frame')$levels$A
+metainfo[['B_list']] = attr(x, 'frame')$levels$B
+
+
 
 # --------------- write meta to file --------------------
 exportJSON <- toJSON(metainfo)

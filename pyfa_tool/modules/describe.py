@@ -11,7 +11,31 @@ from datetime import datetime, timedelta
 from .IO import read_json
 
 
+def _split_fields(fieldslist):
+    single_lvl_fields = []
+    multi_lvl_fields = {}
 
+    for field in fieldslist:
+        fieldname = field['name'].strip()
+
+        #
+        if (fieldname.startswith('S') & fieldname[1:3].isnumeric()):
+            basis_fieldname = fieldname[4:]
+            if not basis_fieldname in multi_lvl_fields.keys():
+                init_fielddict = field
+                init_fielddict['full_name'] = fieldname
+                init_fielddict['name'] = basis_fieldname
+                init_fielddict['levels'] = [int(fieldname[1:4])]
+
+                multi_lvl_fields[basis_fieldname] = init_fielddict #update dict
+
+            else:
+                multi_lvl_fields[basis_fieldname]['levels'].append(int(fieldname[1:4]))
+
+        else:
+            single_lvl_fields.append(field)
+
+    return multi_lvl_fields, single_lvl_fields
 
 def _str_to_dt(strdatetime):
     if len(strdatetime) == 19:
@@ -21,27 +45,66 @@ def _str_to_dt(strdatetime):
     else:
         sys.exit(f'could not format {strdatetime} to a datetime')
 
+def _format_2d_field(fielddict):
+    name = fielddict['name'].strip().ljust(20)
+
+    try:
+        idx = str(fielddict['index']).ljust(8)
+    except KeyError:
+        idx = 'Unknown'.ljust(8)
+    try:
+        spctr = str(fielddict['spectral']).ljust(8)
+    except KeyError:
+        spctr = 'Unknown'.ljust(8)
+    try:
+        nbit = str(fielddict['nbits']).ljust(4)
+    except KeyError:
+        nbit='Unknown'.ljust(4)
+    return f"{name}{idx}{spctr}{nbit}"
 
 
-def _print_fields_table(fields):
+def _format_3d_field(fielddict):
+    basename = fielddict['name'].strip().ljust(20)
+
+    try:
+        fullname = str(fielddict['full_name']).ljust(19)
+    except KeyError:
+        fullname = 'Unknown'.ljust(19)
+
+    all_levels = list(range(min(fielddict['levels']),
+                            max(fielddict['levels']) + 1))
+    # how to specify the levels
+    if set(all_levels) == set(fielddict['levels']):
+        levels = f"{min(fielddict['levels'])} - {max(fielddict['levels'])}"
+    else:
+        levels = fielddict['levels']
+    try:
+        spctr = str(fielddict['spectral']).ljust(10)
+    except KeyError:
+        spctr = 'Unknown'.ljust(10)
+    try:
+        nbit = str(fielddict['nbits']).ljust(4)
+    except KeyError:
+        nbit='Unknown'.ljust(4)
+    return f"{basename}{fullname}{spctr}{nbit}{levels}"
+
+
+
+
+def _print_fields_table(fields_2d, fields_3d):
+    # First 2d fields
+    print('########## 2D ######### \n')
     print(f'{"name".ljust(19)}{"index".ljust(8)}{"spectral".ljust(10)}{"nbits".ljust(6)}')
+    print('------------------------------------------')
+    for field in fields_2d:
+        print(_format_2d_field(field))
 
-    for field in fields:
-        name = field['name'].strip().ljust(20)
+    print('\n########## 3D ######### \n')
+    print(f'{"Base-name".ljust(19)}{"Full-name example".ljust(19)}{"spectral".ljust(10)}{"nbits".ljust(6)}levels')
+    print('-------------------------------------------------------------')
+    for field in fields_3d.values():
+        print(_format_3d_field(field))
 
-        try:
-            idx = str(field['index']).ljust(8)
-        except KeyError:
-            idx = 'Unknown'.ljust(8)
-        try:
-            spctr = str(field['spectral']).ljust(8)
-        except KeyError:
-            spctr = 'Unknown'.ljust(8)
-        try:
-            nbit = str(field['nbits']).ljust(4)
-        except KeyError:
-            nbit='Unknown'.ljust(4)
-        print(f"{name}{idx}{spctr}{nbit}")
 
 
 
@@ -50,6 +113,8 @@ def describe_fa_from_json(metadatajson_path, fieldsjson_path):
     #buffered reading?
     d = read_json(jsonpath=metadatajson_path, to_dataframe=False)
     fields = read_json(jsonpath=fieldsjson_path, to_dataframe=False)
+
+    multi_lvl_fields, single_lvl_fields = _split_fields(fields)
 
     # formatting datetimes
     validdate = _str_to_dt(d['validate'][0])
@@ -62,6 +127,7 @@ def describe_fa_from_json(metadatajson_path, fieldsjson_path):
 ### File format : FA
 
 ## File name: {d['origin']}
+## File path: {d['filepath']}
 
 #################
 ##   VALIDITY  ##
@@ -93,15 +159,31 @@ Resolution in Y (m)     : {d['dy'][0]}
 
 
 #######################
+## Vertical GEOMETRY
+#######################
+N levels                : {d['nlev'][0]}
+Ref pressure            : {d['refpressure'][0]}
+
+Vert coords A           :
+{d['A_list']}
+
+Vert coords B           :
+{d['B_list']}
+
+
+
+#######################
 ## FIELDS
 #######################
 
-Number of fields        : {len(fields)}
+Number of fields        : {d['nfields']}
 
     ''')
 
 
-    _print_fields_table(fields=fields)
+    _print_fields_table(fields_2d = single_lvl_fields,
+                        fields_3d = multi_lvl_fields)
+
 
 
 
