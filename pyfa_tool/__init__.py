@@ -12,4 +12,6 @@ Created on Mon Jan 23 17:20:08 2023
 __version__ = "0.0.1"
 
 
-from .lib_functions import get_fields, FA_to_Xarray, setup_shell_command
+from .lib_functions import (get_fieldnames, field_exists, describe_fa,
+                            get_2d_field, get_3d_field,
+                           )

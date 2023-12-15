@@ -16,6 +16,8 @@ main_path = os.path.dirname(__file__)
 sys.path.append(main_path)
 
 
+
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(prog='PyFA-tool',
@@ -38,7 +40,7 @@ The following functionality is available:
     parser.add_argument("file", help="FA filename of path.", default='') # argument without prefix
 
     # Which mode arguments
-    parser.add_argument('-p', '--plot', help='Make as spatial plot.',
+    parser.add_argument('-p', '--plot', help='Make as spatial plot of a 2D field.',
                         default=True, action='store_true')
     parser.add_argument('-d', '--describe', help='Print out overview info of the FA file',
                         default=False, action='store_true')
@@ -75,8 +77,8 @@ The following functionality is available:
     # =============================================================================
     # Import required modules (so they are not loaded with --help)
     # =============================================================================
-    from modules import to_xarray, plotting, IO, describe
-    import subprocess
+    import pyfa_tool as pyfa
+    from pyfa_tool.modules import plotting
     import matplotlib.pyplot as plt
 
     # =============================================================================
@@ -94,71 +96,49 @@ The following functionality is available:
         # test if relative path is given
         fa_file = os.path.join(os.getcwd(), args.file)
 
-    assert IO.check_file_exist(fa_file), f'{args.file} not found.'
+    assert pyfa.modules.IO.check_file_exist(fa_file), f'{args.file} not found.'
+
+
 
     # =============================================================================
     # Convert FA to json
     # =============================================================================
 
     # 1  create tmp workdir
-    tmpdir = IO.create_tmpdir(location=os.getcwd()) # create a temporary (unique) directory
-    # Launch Rfa to convert FA to json
-    r_script = os.path.join(main_path, 'modules', 'Fa_to_file.R')
-    subprocess.call(["/usr/bin/Rscript", r_script, fa_file, args.field, tmpdir])
+    tmpdir = pyfa.modules.IO.create_tmpdir(location=os.getcwd()) # create a temporary (unique) directory
 
-    # =============================================================================
-    # Paths to output
-    # =============================================================================
-    json_data_path = os.path.join(tmpdir, 'FAdata.json')
-    json_metadata_path = os.path.join(tmpdir, 'FAmetadata.json')
-    fields_json_path = os.path.join(tmpdir, 'fields.json')
 
     # =============================================================================
     # Describe mode
     # =============================================================================
     if args.describe:
-        describe.describe_fa_from_json(metadatajson_path=json_metadata_path,
-                                       fieldsjson_path=fields_json_path)
+        pyfa.describe_fa(fa_filepath=fa_file,
+                    tmpdir=tmpdir,
+                    rm_tmpdir=False)
 
     # =============================================================================
     # Make xarray from json
     # =============================================================================
     if (args.plot | args.convert):
 
-        # =============================================================================
-        # Test if field exists
-        # =============================================================================
-        fieldexists = to_xarray._field_exists(fieldname=args.field,
-                                              field_json_path=fields_json_path)
-        if not fieldexists:
-            print(f'{args.field} not found in {fa_file}.')
-
-            # # print available fields
-            fieldsdf = IO.read_json(jsonpath=fields_json_path,
-                                    to_dataframe=True)
-            n = 10
-            print(f'A total of {fieldsdf.shape[0]} fiels are found, here are the first {n}: \n')
-            print(fieldsdf['name'].to_list()[:n])
-            print('To list all fields, use the -d (--describe) argument.')
-
-            shutil.rmtree(tmpdir)
-            sys.exit(f'{args.field} not found in {fa_file}.')
-
         if args.proj == '':
             reproj_bool = False
         else:
             reproj_bool = True
 
-        data = to_xarray.json_to_rioxarray(json_data_path=json_data_path,
-                                           json_metadata_path=json_metadata_path,
-                                           reproject=reproj_bool,
-                                           target_epsg=args.proj)
+        data = pyfa.get_2d_field(fa_filepath=fa_file,
+                            fieldname=str(args.field),
+                            fieldnamesdf=None,
+                            reproj=reproj_bool,
+                            target_crs=args.proj,
+                            tmpdir=tmpdir,
+                            rm_tmpdir=True)
 
         if args.plot:
 
             # make plot
 
-            kwargs = IO.make_kwarg_dict(args.kwargs)
+            kwargs = pyfa.modules.IO.make_kwarg_dict(args.kwargs)
             if args.save:
                 # make output filepath
                 origin = data.attrs['origin']
@@ -172,7 +152,7 @@ The following functionality is available:
                 filepath = os.path.join(os.getcwd(), filename)
 
 
-            fig, axs = plotting.make_fig()
+            fig, axs = pyfa.modules.plotting.make_fig()
             plotting.make_plot(dxr=data,
                                ax=axs,
                                # TODO pass arguments as kwargs
@@ -192,5 +172,5 @@ The following functionality is available:
     # Delete json data
     # =============================================================================
 
-    shutil.rmtree(tmpdir)
+    shutil.rmtree(tmpdir, ignore_errors=True)
 

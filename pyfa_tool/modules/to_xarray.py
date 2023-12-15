@@ -42,17 +42,27 @@ def json_to_rioxarray(json_data_path, json_metadata_path, reproject=True, target
     # Data to xarray
     # =============================================================================
 
-    # dt_fmt = '%Y-%m-%d %H:%M:%S'
-    # fieldname = data['name'][0].rstrip()
-    # validdate = datetime.strptime(data['validate'][0], dt_fmt)
+    if len(np.array(data['data']).shape) == 2:
+        # 2D field
+        data_xr = xr.DataArray(np.asarray(data['data']).transpose(),
+                               coords={'x': np.asarray(data['xcoords']),
+                                       'y': np.asarray(data['ycoords']),
+                                       },
+                               dims=["y", "x"])
+
+    elif len(np.array(data['data']).shape) == 3:
+        # 3D field
+        data_xr = xr.DataArray(np.array(data['data']).transpose((1,0,2)),
+                               coords={'x': np.asarray(data['xcoords']),
+                                       'y': np.asarray(data['ycoords']),
+                                       'level': np.asarray(data['zcoords'])
+                                       },
+                               dims=["y", "x", "level"])
+
+        data_xr = data_xr.transpose('level', 'y', 'x') # reorder for transformating
 
 
-
-    data_xr = xr.DataArray(np.asarray(data['data']).transpose(),
-                        coords={'x': np.asarray(data['xcoords']),
-                                'y': np.asarray(data['ycoords']),
-                                },
-                        dims=["y", "x"])
+    data_xr.rio.set_spatial_dims('x', 'y', inplace=True)
 
 
     # =============================================================================
