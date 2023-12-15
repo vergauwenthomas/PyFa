@@ -35,7 +35,7 @@ The following functionality is available:
                                                 Example: .... vmin=288 vmax=294 cmap=?? ... '''
                                      )
 
-    parser.add_argument("file", help="FA filename of path.", default='') #argument without prefix
+    parser.add_argument("file", help="FA filename of path.", default='') # argument without prefix
 
     # Which mode arguments
     parser.add_argument('-p', '--plot', help='Make as spatial plot.',
@@ -45,23 +45,14 @@ The following functionality is available:
     parser.add_argument('-c', '--convert', help='Convert a FA file to netCDF',
                         default=False, action='store_true')
 
-
-
-
     parser.add_argument("--print_fields", help="print available fields",
                         default=False, action="store_true")
     parser.add_argument("-f", "--file", help="FA filename of path.", default='')
     parser.add_argument("--field", help="fieldname", default='SFX.T2M')
-    # parser.add_argument("--get_fieldnames", help="Write fieldnames to a file in the cwd.",
-    #                     default=False, action="store_true")
-
     parser.add_argument("--proj", help="Reproject to this crs (ex: EPSG:4326)", default='EPSG:4326')
-
-
 
     parser.add_argument("--save", help="Save plot to file",
                         default=False, action='store_true')
-
     parser.add_argument('kwargs', help='Extra arguments passed to the plot function.', nargs='*')
 
     args = parser.parse_args()
@@ -81,14 +72,12 @@ The following functionality is available:
         # Because of default true for plot this should never be triggered.
         sys.exit("Select either one of --plot, --describe or --convert.")
 
-
     # =============================================================================
     # Import required modules (so they are not loaded with --help)
     # =============================================================================
     from modules import to_xarray, plotting, IO, describe
     import subprocess
     import matplotlib.pyplot as plt
-
 
     # =============================================================================
     # Check arguments
@@ -107,13 +96,12 @@ The following functionality is available:
 
     assert IO.check_file_exist(fa_file), f'{args.file} not found.'
 
-
     # =============================================================================
     # Convert FA to json
     # =============================================================================
 
     # 1  create tmp workdir
-    tmpdir = IO.create_tmpdir(location=os.getcwd()) #create a temporary (unique) directory
+    tmpdir = IO.create_tmpdir(location=os.getcwd()) # create a temporary (unique) directory
     # Launch Rfa to convert FA to json
     r_script = os.path.join(main_path, 'modules', 'Fa_to_file.R')
     subprocess.call(["/usr/bin/Rscript", r_script, fa_file, args.field, tmpdir])
@@ -124,27 +112,6 @@ The following functionality is available:
     json_data_path = os.path.join(tmpdir, 'FAdata.json')
     json_metadata_path = os.path.join(tmpdir, 'FAmetadata.json')
     fields_json_path = os.path.join(tmpdir, 'fields.json')
-
-
-
-
-
-    # # =============================================================================
-    # # Write fieldnames info to file if needed
-    # # =============================================================================
-
-    # if args.get_fieldnames:
-    #     # fieldnames json is alway created, convert them to csv and write in cwd
-    #     all_fields_csv_path = os.path.join(os.getcwd(), 'fieldnames.csv')
-    #     fielddata = IO.read_json(jsonpath=fields_json_path,
-    #                              to_dataframe=True)
-    #     IO.write_to_csv(fielddata, all_fields_csv_path)
-    #     print(f'All available fields are writen to {all_fields_csv_path}.')
-
-
-
-
-
 
     # =============================================================================
     # Describe mode
@@ -161,9 +128,8 @@ The following functionality is available:
         # =============================================================================
         # Test if field exists
         # =============================================================================
-        print(f'args fieldname: {args.field}')
-        fieldexists=to_xarray._field_exists(fieldname=args.field,
-                                            field_json_path=fields_json_path)
+        fieldexists = to_xarray._field_exists(fieldname=args.field,
+                                              field_json_path=fields_json_path)
         if not fieldexists:
             print(f'{args.field} not found in {fa_file}.')
 
@@ -178,7 +144,6 @@ The following functionality is available:
             shutil.rmtree(tmpdir)
             sys.exit(f'{args.field} not found in {fa_file}.')
 
-
         if args.proj == '':
             reproj_bool = False
         else:
@@ -189,16 +154,11 @@ The following functionality is available:
                                            reproject=reproj_bool,
                                            target_epsg=args.proj)
 
-
         if args.plot:
 
-
-            # =============================================================================
             # make plot
-            # =============================================================================
 
             kwargs = IO.make_kwarg_dict(args.kwargs)
-
             if args.save:
                 # make output filepath
                 origin = data.attrs['origin']
@@ -212,25 +172,21 @@ The following functionality is available:
                 filepath = os.path.join(os.getcwd(), filename)
 
 
-
             fig, axs = plotting.make_fig()
             plotting.make_plot(dxr=data,
                                ax=axs,
-                               #TODO pass arguments as kwargs
+                               # TODO pass arguments as kwargs
                                **kwargs
                                )
 
             if args.save:
                 plotting.save_plot(fig=fig, filepath=filepath, fmt='png')
-
-
             plt.show()
 
         else:
-            # =============================================================================
             # Write to netCDF file
-            # =============================================================================
-            print('to netcdf --> TODO')
+            print('to netcdf --> not implemnted yet')
+            sys.exit()
 
     # =============================================================================
     # Delete json data
