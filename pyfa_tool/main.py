@@ -66,6 +66,7 @@ The following functionality is available:
         # no plotting when describing or converting
         args.plot = False
 
+
     # Check if mode is unique
     _selected = [count for count in [args.plot, args.describe, args.convert] if count is True]
     if len(_selected) > 1:
@@ -80,6 +81,7 @@ The following functionality is available:
     import pyfa_tool as pyfa
     from pyfa_tool.modules import plotting
     import matplotlib.pyplot as plt
+    from pathlib import Path
 
     # =============================================================================
     # Check arguments
@@ -165,8 +167,16 @@ The following functionality is available:
 
         else:
             # Write to netCDF file
-            print('to netcdf --> not implemnted yet')
-            sys.exit()
+            target_dir = str(Path(fa_file).parent)
+            target_file = str(Path(fa_file).stem) + '.nc'
+
+            pyfa.modules.to_xarray.save_as_nc(xrdata=data,
+                                              outputfolder=target_dir,
+                                              filename=target_file,
+                                              overwrite=False)
+
+
+
 
     # =============================================================================
     # Delete json data

@@ -22,6 +22,9 @@ def check_file_exist(filepath):
     """Check if a filepath exists."""
     return os.path.isfile(filepath)
 
+def check_folder_exist(folderpath):
+    return os.path.isdir(folderpath)
+
 def create_tmpdir(location, tmpdir_name='tmp_fajson'):
     """
     Create a new (temporary) directory in the location, that serves as a cache.

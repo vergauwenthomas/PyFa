@@ -10,12 +10,44 @@ import xarray as xr
 import numpy as np
 import rioxarray
 from datetime import datetime
-import os
+import os, sys
 import json
 import rasterio
 
 from . import IO
 
+
+
+
+
+
+def save_as_nc(xrdata, outputfolder, filename, overwrite=False):
+
+    # check fileneme extension
+    if not filename.endswith('.nc'):
+        filename = filename+'.nc'
+
+    # check if outputfolder exists
+    if not IO.check_folder_exist(outputfolder):
+        sys.exit(f'{outputfolder} directory not found.')
+
+    # check if file exist
+    target_file = os.path.join(outputfolder, filename)
+    if (IO.check_file_exist(target_file) & (not overwrite)):
+        sys.exit(f'{target_file} already exists.')
+
+    # convert to nc
+    xrdata.to_netcdf(path=target_file,
+                     mode='w',
+                     format=None,
+                     group=None,
+                     engine=None,
+                     encoding=None,
+                     unlimited_dims=None,
+                     compute=True,
+                     invalid_netcdf=False)
+    print(f'Data saved to {target_file}')
+    return None
 
 
 

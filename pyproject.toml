@@ -19,6 +19,7 @@ geopandas = "^0.12.2"
 xarray = "^2023.1.0"
 rioxarray = "^0.13.3"
 cartopy = "^0.22"
+netcdf4 = "^1"
 
 [tool.poetry.group.dev.dependencies]
 #Group of dep packages for development
