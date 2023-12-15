@@ -7,7 +7,7 @@ Created on Tue Jan 24 17:11:14 2023
 
 @author: thoverga
 """
-import os
+import os, sys
 import subprocess
 import shutil
 
@@ -18,8 +18,8 @@ main_path = os.path.dirname(__file__)
 
 def setup_shell_command():
     from .modules import setup_shell_commands
-    
-    
+
+
 def get_fields(fa_filepath):
     """
     Get all the fields from an FA file.
@@ -35,47 +35,47 @@ def get_fields(fa_filepath):
         Available fields information.
 
     """
-    
-    json_path, fields_json_path, tmpdir = _Fa_to_json(fafile=fa_filepath,
-                                                      fieldname='_dummy')
-    
-    
+
+    _json_data_path, _json_metadata_path, fields_json_path, tmpdir = _Fa_to_json(fafile=fa_filepath,
+                                                                                fieldname='_dummy')
+
+
     fielddata = IO.read_json(jsonpath=fields_json_path, to_dataframe=True)
-    
+
     shutil.rmtree(tmpdir)
     return fielddata
-    
-    
-    
+
+
+
 def get_rbin():
     """Funtion to extract the Rbin of your environment"""
     #Write very simple R script in curdir
     r_miniscript = os.path.join(os.getcwd(), 'mini_R_script.R')
     with open(r_miniscript, 'w') as f:
         f.write('R.home("bin")')
-    
-    
-    #Execure script and extract the rbin    
+
+
+    #Execure script and extract the rbin
     result = subprocess.run(['Rscript', r_miniscript], capture_output=True, text=True)
     rbin = result.stdout.split('"')[1]
-    
-    
+
+
     #Delete basic r script
-    
+
     try:
         os.remove(r_miniscript)
     except OSError:
         pass
 
     return rbin
-    
-    
-    
+
+
+
 def _Fa_to_json(fafile, fieldname):
     """
-    This function will launch an R script, that uses Rfa to extract a field from an FA file. 
-    The data is writen to a json, that is temporarely stored in a tmp folder. 
-    
+    This function will launch an R script, that uses Rfa to extract a field from an FA file.
+    The data is writen to a json, that is temporarely stored in a tmp folder.
+
     The return are the paths to relevant locations (json files and tmp folder).
 
 
@@ -96,40 +96,34 @@ def _Fa_to_json(fafile, fieldname):
         Path of the temp direcotry where the jsons are stored.
 
     """
-    
+
     # 1  create tmp workdir
-    tmpdir = os.path.join(os.getcwd(), 'tmp_fajson')
-    tmpdir_available = False
-    while tmpdir_available == False:
-        if os.path.exists(tmpdir):  # Do not overwrite if this dir exists already
-            tmpdir += '_a'
-        else:
-            tmpdir_available = True
-    
-    os.makedirs(tmpdir)
-    
-    
+    tmpdir = IO.create_tmpdir(location=os.getcwd()) #create a temporary (unique) directory
+
+
     # Launch Rfa to convert FA to json
     r_script = os.path.join(main_path, 'modules', 'Fa_to_file.R')
-    
+
     #Locate the R bin on your system and lauch the Rscript
     rbin = get_rbin()
     subprocess.call([os.path.join(rbin, 'Rscript'), r_script, fafile, fieldname, tmpdir])
-    
-    
-    
+
+
+
     # =============================================================================
     # Paths to output
     # =============================================================================
-    json_path = os.path.join(tmpdir, 'FAdata.json')
+
+    json_data_path = os.path.join(tmpdir, 'FAdata.json')
+    json_metadata_path = os.path.join(tmpdir, 'FAmetadata.json')
     fields_json_path = os.path.join(tmpdir, 'fields.json')
-    
-    return json_path, fields_json_path, tmpdir
+
+    return json_data_path, json_metadata_path, fields_json_path, tmpdir
 
 
 
 
-    
+
 def FA_to_Xarray(fa_filepath, fieldname='SFX.T2M', target_crs='EPSG:4326'):
     """
     This function imports a field from an FA file into an Xarray.DataArray. If needed,
@@ -150,47 +144,42 @@ def FA_to_Xarray(fa_filepath, fieldname='SFX.T2M', target_crs='EPSG:4326'):
         A DataArray containing the data in the target_crs. Meta data + CRS info is added to the data.attrs.
 
     """
-    
-    json_path, fields_json_path, tmpdir = _Fa_to_json(fafile=fa_filepath,
-                                              fieldname=fieldname)
-    
 
-    
+    json_data_path, json_metadata_path, fields_json_path, tmpdir = _Fa_to_json(fafile=fa_filepath,
+                                                                               fieldname=fieldname)
+
+
+
     # =============================================================================
-    # check if json file is created
+    # Test if field exists
     # =============================================================================
-    
-    if not os.path.isfile(json_path):
+
+    fieldexists=to_xarray._field_exists(fieldname=fieldname,
+                                        field_json_path=fields_json_path)
+    if not fieldexists:
         print(f'{fieldname} not found in {fa_filepath}.')
-    
-        # print available fields
+
+        # # print available fields
         fieldsdf = IO.read_json(jsonpath=fields_json_path,
                                 to_dataframe=True)
-    
-        if fieldsdf.shape[0] > 100:
-            fieldsdf = fieldsdf[0:100]
-            print(
-                f'There are {fieldsdf.shape[0]} stored in the {fa_filepath}. Here are the first 100 fields:')
-        else:
-            print(f'There are {fieldsdf.shape[0]} stored in the {fa_filepath}:')
-        print(fieldsdf)
-        print('To get all fields, use the get_fields() function.')
-    
-    
-        #TODO: define errors
+        n = 10
+        print(f'A total of {fieldsdf.shape[0]} fiels are found, here are the first {n}: \n')
+        print(fieldsdf['name'].to_list()[:n])
+        print('To list all fields, use the -d (--describe) argument.')
+
         shutil.rmtree(tmpdir)
-        # sys.exit(f'{fieldname} not found in {fa_filepath}.')
-        return None
-    
+        sys.exit(f'{fieldname} not found in {fa_filepath}.')
+
     # =============================================================================
     # Make xarray from json
     # =============================================================================
-   
+
     reproj_bool = True
-    
-    data = to_xarray.json_to_rioxarray(json_path=json_path,
+
+    data = to_xarray.json_to_rioxarray(json_data_path=json_data_path,
+                                       json_metadata_path=json_metadata_path,
                                        reproject=reproj_bool,
                                        target_epsg=target_crs)
-    
+
     shutil.rmtree(tmpdir)
     return data

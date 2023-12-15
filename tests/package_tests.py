@@ -7,8 +7,20 @@ Created on Wed Jan 25 09:16:18 2023
 """
 
 
-import pyfa_tool as pyfa
+import sys, os
+from pathlib import Path
 
+
+rootfolder = Path(__file__).parents[1].resolve()
+
+
+climate_fa=os.path.join(rootfolder,'tests', 'data', 'ICMSHABOF+0732')
+nwp_fa =os.path.join(rootfolder, 'tests', 'data', 'ICMSHAR13+0014')
+
+sys.path.insert(0, rootfolder)
+
+import pyfa_tool as pyfa
+#%%
 # =============================================================================
 # Setup shell commands
 # =============================================================================
@@ -17,27 +29,20 @@ pyfa.setup_shell_command()
 print('Done')
 
 
-
-
-# =============================================================================
-# FA handling
-# =============================================================================
-import os
-
-testfolder = os.path.dirname(__file__)
-fa_file = os.path.join(testfolder, 'data', 'ICMSHAR13+0014' )
-
-
 # =============================================================================
 # Get fieldnames
 # =============================================================================
 print('Running get_fieldnames in python')
-fielddf = pyfa.get_fields(fa_file)
+fielddf = pyfa.get_fields(climate_fa)
+assert fielddf.shape[0] == 410, f'The climate FA fields are not extracted correctly'
+assert len(fielddf.columns) > 1, 'only one fieldcolumn is extracted for climate FA'
 
-print('Here the fieldinfo: ', fielddf)
 
 
-print('Done')
+fielddf = pyfa.get_fields(nwp_fa)
+assert fielddf.shape[0] == 1375, 'The climate FA fields are not extracted correctly'
+assert len(fielddf.columns) > 1, 'only one fieldcolumn is extracted for climate FA'
+
 
 
 # =============================================================================
@@ -46,17 +51,16 @@ print('Done')
 
 
 print('Running FA_to_Xarray in python')
-data = pyfa.FA_to_Xarray(fa_filepath=fa_file,
+data = pyfa.FA_to_Xarray(fa_filepath=climate_fa,
                   fieldname='SURFTEMPERATURE',
                   target_crs='EPSG:4326')
-
-print('Here is the data info: ', data)
-
-print('Done')
+assert int(data.max(skipna=True)) == 313, 'Error in climate FA import in to xarray'
 
 
-
-
+nwpdata = pyfa.FA_to_Xarray(fa_filepath=nwp_fa,
+                  fieldname='S004WIND.U.PHYS',
+                  target_crs='EPSG:4326')
+assert int(data.max(skipna=True)) == 13, 'Error in NWP FA import in to xarray'
 
 
 
