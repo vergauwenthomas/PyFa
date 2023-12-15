@@ -25,7 +25,6 @@ filename = args[1]
 field = args[2]
 outputdir = args[3]
 
-print(filename)
 
 #datafile = paste0(outputdir, "field_data_", LT, ".txt")
 #infofile = paste0(outputdir, "field_info_", LT, ".txt")

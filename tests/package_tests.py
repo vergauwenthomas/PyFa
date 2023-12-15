@@ -60,7 +60,7 @@ assert int(data.max(skipna=True)) == 313, 'Error in climate FA import in to xarr
 nwpdata = pyfa.FA_to_Xarray(fa_filepath=nwp_fa,
                   fieldname='S004WIND.U.PHYS',
                   target_crs='EPSG:4326')
-assert int(data.max(skipna=True)) == 13, 'Error in NWP FA import in to xarray'
+assert int(nwpdata.max(skipna=True)) == 15, 'Error in NWP FA import in to xarray'
 
 
 
