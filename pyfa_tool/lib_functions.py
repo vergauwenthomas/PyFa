@@ -18,11 +18,48 @@ from .modules.describe_module import describe_fa_from_json
 main_path = os.path.dirname(__file__)
 
 def setup_shell_command():
+    """
+    When colling this function, the CLI PyFa is activated on your system.
+
+    Returns
+    -------
+    None.
+
+    Note
+    -------
+    Only support for UNIX and writing right on the .bashrc.
+
+    """
     from .modules import setup_shell_commands
 
 
 def _get_fa_metadata(fa_filepath, fieldsdf=None,
                      tmpdir=None, rm_tmpdir=True):
+    """
+    Get the list of metadata attributes of an FA file.
+
+    The metadata is extracted by extracting a (dummy) field form the FA file.
+
+    Parameters
+    ----------
+    fa_filepath : str
+        The path of the FA file.
+    fieldsdf : pandas.DataFrame, optional
+        Available fields information in a Dataframe. If None, this will be
+        extracted from the FA file. The default is None.
+    tmpdir : str, optional
+        The path to a temporary storage location for the json files. If None,
+        a new temporary folder is created. The default is None.
+    rm_tmpdir : bool, optional
+        Wether to remove the temporary storage direction, with all its content (= json
+        files) at the end of this function. The default is True.
+
+    Returns
+    -------
+    metadata : list
+        A list of metadata attributes (in dict form).
+
+    """
 
     if not IO.check_file_exist(fa_filepath):
         sys.exit(f'{fa_filepath} is not a file.')
@@ -64,7 +101,30 @@ def _get_fa_metadata(fa_filepath, fieldsdf=None,
 
 
 def describe_fa(fa_filepath, tmpdir=None, rm_tmpdir=True):
+    """
+    Print out an overview of the content (fields, validity, ... ) of an FA file.
 
+    This is done by:
+        * Extracting all fields from the FA file
+        * Using an existing field, to extract the metadata from the FA.
+
+
+    Parameters
+    ----------
+    fa_filepath : str
+        The path of the FA file.
+    tmpdir : str, optional
+        The path to a temporary storage location for the json files. If None,
+        a new temporary folder is created. The default is None.
+    rm_tmpdir : bool, optional
+        Wether to remove the temporary storage direction, with all its content (= json
+        files) at the end of this function. The default is True.
+
+    Returns
+    -------
+    None.
+
+    """
     if not IO.check_file_exist(fa_filepath):
         sys.exit(f'{fa_filepath} is not a file.')
 
@@ -94,20 +154,23 @@ def describe_fa(fa_filepath, tmpdir=None, rm_tmpdir=True):
 
 def get_fieldnames(fa_filepath, tmpdir=None, rm_tmpdir=True):
     """
-    TODO update
-
-
-    Get all the fields from an FA file.
+    Get all the fields information from an FA file.
 
     Parameters
     ----------
     fa_filepath : Str
         Path to the FA-file.
+    tmpdir : str, optional
+        The path to a temporary storage location for the json files. If None,
+        a new temporary folder is created. The default is None.
+    rm_tmpdir : bool, optional
+        Wether to remove the temporary storage direction, with all its content (= json
+        files) at the end of this function. The default is True.
 
     Returns
     -------
     fielddata : pandas.DataFrame
-        Available fields information.
+        Available fields information in a Dataframe.
 
     """
 
@@ -143,19 +206,71 @@ def get_fieldnames(fa_filepath, tmpdir=None, rm_tmpdir=True):
     return fielddata
 
 
-
 def field_exists(fielddf, fieldname):
+    """
+    Test if a fieldname is present.
+
+    Parameters
+    ----------
+    fielddf : pandas.DataFrame
+        Available fields information in a Dataframe.
+    fieldname : str
+        The fieldname to test.
+
+    Returns
+    -------
+    bool
+        True if the fieldname is found, else False.
+
+    """
     return (fieldname.upper() in [f.upper().strip() for f in fielddf['name']])
 
 
 
 def _list_3d_fieldnames(fielddf):
+    """
+    Create a list of all basisfieldnames which occures at multiple levels.
+
+    (The basisfieldname is the fieldname without the level identifier. So
+     S012TEMPERATURE has TEMPERATURE as basisfieldname)
+
+    Parameters
+    ----------
+    fielddf : pandas.DataFrame
+        Available fields information in a Dataframe.
+
+    Returns
+    -------
+    basis_3d_names : list
+        List of basisnames for present 3D fields.
+
+    """
     # find 3d fieldnames in the fielddf
     basis_3d_names = list(set([f[4:] for f in fielddf['name'] if ((f.startswith('S')) & (f[1:3].isnumeric()))]))
     return basis_3d_names
 
 
 def find_3d_fieldname(fielddf, fieldname):
+    """
+    Find the basisfieldname for a fieldname, and test if it is present.
+
+
+    Parameters
+    ----------
+    fielddf : pandas.DataFrame
+        Available fields information in a Dataframe.
+    fieldname : str
+        The fieldname to find the basisfieldname form of and to test if it is
+        present.
+
+    Returns
+    -------
+    basisfieldname : str
+        The basisname fo the 3D field.
+    bool
+        Wether the basisfieldname is a present field.
+
+    """
     fieldname = str(fieldname).upper()
 
     # find 3d fieldnames in the fielddf
@@ -179,6 +294,44 @@ def find_3d_fieldname(fielddf, fieldname):
 def get_2d_field(fa_filepath, fieldname, fieldnamesdf=None,
                  reproj=True, target_crs='EPSG:4326',
                  tmpdir=None, rm_tmpdir=True):
+    """
+    Imports a 2D- field from an FA file into an Xarray.DataArray.
+
+
+    If needed the data is reprojected to another CRS.
+    The fieldname provided is upper/lower case insensitive; it will be formatted.
+
+    Parameters
+    ----------
+    fa_filepath : str
+        The path of the FA file.
+    fieldname : str
+        The name of the 2D field to extract.
+    fieldnamesdf : pandas.DataFrame, optional
+        Available fields information in a Dataframe. If None, this will be
+        extracted from the FA file. The default is None.
+    reproj : bool, optional
+        If True, the field will be reprojected by using the target_crs. The
+        default is True.
+    target_crs : str, optional
+        EPSG code for the desired CRS of the xarray.DataArray. The default is
+        'EPSG:4326'.
+    tmpdir : str, optional
+        The path to a temporary storage location for the json files. If None,
+        a new temporary folder is created. The default is None.
+    rm_tmpdir : bool, optional
+        Wether to remove the temporary storage direction, with all its content (= json
+        files) at the end of this function. The default is True.
+
+    Returns
+    -------
+    data : xarray.DataArray
+        The 2D field contained in a xarray object.
+    """
+
+
+
+
     if not IO.check_file_exist(fa_filepath):
         sys.exit(f'{fa_filepath} is not a file.')
 
@@ -232,6 +385,52 @@ def get_2d_field(fa_filepath, fieldname, fieldnamesdf=None,
 def get_3d_field(fa_filepath, fieldname, fieldnamesdf=None,
                  target_crs='EPSG:4326',
                  tmpdir=None, rm_tmpdir=True):
+    """
+    Imports a 3D-field from an FA file into an Xarray.DataArray.
+
+    A 3D-field is a field which is present at multiple levels, or for which a
+    level indicator is present in the fieldname. The vertical coordinates
+    are model coordinates.
+
+    If needed the data is reprojected to another CRS.
+    The fieldname provided is upper/lower case insensitive and both
+    basisfieldnames (i.g.TEMPERATURE) and fieldnames (i.g. S012TEMPERATURE)
+    can be provided, it will be formatted accordingly.
+
+
+    Parameters
+    ----------
+    fa_filepath : str
+        The path of the FA file.
+    fieldname : str
+        The name of the 3D field to extract. Both basisfieldnames or equivalent
+        2D fieldname or possible.
+    fieldnamesdf : pandas.DataFrame, optional
+        Available fields information in a Dataframe. If None, this will be
+        extracted from the FA file. The default is None.
+    reproj : bool, optional
+        If True, the field will be reprojected by using the target_crs. The
+        default is True.
+    target_crs : str, optional
+        EPSG code for the desired CRS of the xarray.DataArray. The default is
+        'EPSG:4326'.
+    tmpdir : str, optional
+        The path to a temporary storage location for the json files. If None,
+        a new temporary folder is created. The default is None.
+    rm_tmpdir : bool, optional
+        Wether to remove the temporary storage direction, with all its content (= json
+        files) at the end of this function. The default is True.
+
+    Returns
+    -------
+    data : xarray.DataArray
+        The 3D field contained in a xarray object. The vertical coordinates are
+        modellevels.
+
+    """
+
+
+
     if not IO.check_file_exist(fa_filepath):
         sys.exit(f'{fa_filepath} is not a file.')
 
@@ -278,11 +477,6 @@ def get_3d_field(fa_filepath, fieldname, fieldnamesdf=None,
        shutil.rmtree(tmpdir, ignore_errors=True)
 
     return data
-
-
-
-
-
 
 
 

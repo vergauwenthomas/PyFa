@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Fri Jan 20 14:46:48 2023
+Collection of functions to tranfer to/from xarray objects.
 
 @author: thoverga
 """
@@ -17,11 +17,29 @@ import rasterio
 from . import IO
 
 
+def save_as_nc(xrdata, outputfolder, filename, overwrite=False, **kwargs):
+    """
+    Save an Xarray object to a NetCDF file.
 
+    Parameters
+    ----------
+    xrdata : xarray.DataArray or xarray.DataSet
+        The Xarray data object to save.
+    outputfolder : str
+        Path of the directory to save the NetCDF.
+    filename : str
+        Name of the netCDF file. (.nc extenstion is added if not provided.)
+    overwrite : bool, optional
+        If False, the xarray object is not saved if the netCDF file already
+        exists. The default is False.
+    **kwargs : optional
+        kwargs are passed to the .to_netcdf() method of the xarray object.
 
+    Returns
+    -------
+    None.
 
-
-def save_as_nc(xrdata, outputfolder, filename, overwrite=False):
+    """
 
     # check fileneme extension
     if not filename.endswith('.nc'):
@@ -39,29 +57,46 @@ def save_as_nc(xrdata, outputfolder, filename, overwrite=False):
     # convert to nc
     xrdata.to_netcdf(path=target_file,
                      mode='w',
-                     format=None,
-                     group=None,
-                     engine=None,
-                     encoding=None,
-                     unlimited_dims=None,
-                     compute=True,
-                     invalid_netcdf=False)
+                     **kwargs)
     print(f'Data saved to {target_file}')
     return None
 
 
 
 
-def _field_exists(fieldname, field_json_path):
-    """Test if a fieldname is FA file."""
-    nameseries = IO.read_json(field_json_path, True)['name']
-    nameseries = nameseries.apply(lambda x: x.strip())
-    return (fieldname in nameseries.to_list())
+# def _field_exists(fieldname, field_json_path):
+#     """Test if a fieldname is FA file."""
+#     nameseries = IO.read_json(field_json_path, True)['name']
+#     nameseries = nameseries.apply(lambda x: x.strip())
+#     return (fieldname in nameseries.to_list())
 
 
 
 def json_to_rioxarray(json_data_path, json_metadata_path, reproject=True, target_epsg="EPSG:4326"):
+    """
+    Create a xarray.DataArray from the data and metadata files (jsons).
 
+    The data can be reprojected to other CRS if required.
+
+    Parameters
+    ----------
+    json_data_path : str
+        Path to the json file containing the data.
+    json_metadata_path : str
+        Path to the json file containing the metadata.
+    reproj : bool, optional
+        If True, the field will be reprojected by using the target_crs. The
+        default is True.
+    target_crs : str, optional
+        EPSG code for the desired CRS of the xarray.DataArray. The default is
+        'EPSG:4326'.
+
+    Returns
+    -------
+    data_xr : xarray.DataArray
+        The data from the json files contained in a xarray.DataArray object.
+
+    """
     # =============================================================================
     #  Read json file
     # =============================================================================
@@ -127,9 +162,5 @@ def json_to_rioxarray(json_data_path, json_metadata_path, reproject=True, target
     data_xr = data_xr.where(data_xr != data_xr.rio.nodata)
 
     return data_xr
-
-
-
-#%%
 
 
