@@ -16,8 +16,6 @@ main_path = os.path.dirname(__file__)
 sys.path.append(main_path)
 
 
-
-
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(prog='PyFA-tool',
@@ -37,7 +35,7 @@ The following functionality is available:
                                                 Example: .... vmin=288 vmax=294 cmap=?? ... '''
                                      )
 
-    parser.add_argument("file", help="FA filename of path.", default='') # argument without prefix
+    parser.add_argument("file", help="FA filename of path.", default='')  # argument without prefix
 
     # Which mode arguments
     parser.add_argument('-p', '--plot', help='Make as spatial plot of a 2D field.',
@@ -65,7 +63,6 @@ The following functionality is available:
     if (args.describe | args.convert):
         # no plotting when describing or converting
         args.plot = False
-
 
     # Check if mode is unique
     _selected = [count for count in [args.plot, args.describe, args.convert] if count is True]
@@ -100,8 +97,6 @@ The following functionality is available:
 
     assert pyfa.modules.IO.check_file_exist(fa_file), f'{args.file} not found.'
 
-
-
     # =============================================================================
     # Convert FA to json
     # =============================================================================
@@ -109,14 +104,13 @@ The following functionality is available:
     # 1  create tmp workdir
     tmpdir = pyfa.modules.IO.create_tmpdir(location=os.getcwd()) # create a temporary (unique) directory
 
-
     # =============================================================================
     # Describe mode
     # =============================================================================
     if args.describe:
         pyfa.describe_fa(fa_filepath=fa_file,
-                    tmpdir=tmpdir,
-                    rm_tmpdir=False)
+                         tmpdir=tmpdir,
+                         rm_tmpdir=False)
 
     # =============================================================================
     # Make xarray from json
@@ -129,17 +123,16 @@ The following functionality is available:
             reproj_bool = True
 
         data = pyfa.get_2d_field(fa_filepath=fa_file,
-                            fieldname=str(args.field),
-                            fieldnamesdf=None,
-                            reproj=reproj_bool,
-                            target_crs=args.proj,
-                            tmpdir=tmpdir,
-                            rm_tmpdir=True)
+                                 fieldname=str(args.field),
+                                 fieldnamesdf=None,
+                                 reproj=reproj_bool,
+                                 target_crs=args.proj,
+                                 tmpdir=tmpdir,
+                                 rm_tmpdir=True)
 
         if args.plot:
 
             # make plot
-
             kwargs = pyfa.modules.IO.make_kwarg_dict(args.kwargs)
             if args.save:
                 # make output filepath
@@ -152,7 +145,6 @@ The following functionality is available:
                     filename = f'{origin}_{args.field}.png'
 
                 filepath = os.path.join(os.getcwd(), filename)
-
 
             fig, axs = pyfa.modules.plotting.make_fig()
             plotting.make_plot(dxr=data,
@@ -175,12 +167,8 @@ The following functionality is available:
                                               filename=target_file,
                                               overwrite=False)
 
-
-
-
     # =============================================================================
     # Delete json data
     # =============================================================================
 
     shutil.rmtree(tmpdir, ignore_errors=True)
-

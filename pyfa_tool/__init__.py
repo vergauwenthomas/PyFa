@@ -9,7 +9,7 @@ Created on Mon Jan 23 17:20:08 2023
 # from .lib_functions import setup_shell_command, FA_to_Xarray, get_fields
 
 
-__version__ = "0.0.1"
+__version__ = "0.0.2a"
 
 
 
