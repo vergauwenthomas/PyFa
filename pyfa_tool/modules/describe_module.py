@@ -56,7 +56,7 @@ def _print_fields_table(fields_2d, fields_3d):
         print(_format_3d_field(field))
 
 
-def describe_fa_from_json(metadatajson_path, fieldsjson_path):
+def describe_fa_from_json(metadata, fieldslist):
     """
     Print out an overview of the FA file content by reading the json FA files.
 
@@ -74,10 +74,10 @@ def describe_fa_from_json(metadatajson_path, fieldsjson_path):
     """
     # Reading the data jsonfile
     # Buffered reading?
-    d = read_json(jsonpath=metadatajson_path, to_dataframe=False)
-    fields = read_json(jsonpath=fieldsjson_path, to_dataframe=False)
+    d = metadata
+    # fields = read_json(jsonpath=fieldsjson_path, to_dataframe=False)
 
-    multi_lvl_fields, single_lvl_fields = _split_fields(fields)
+    multi_lvl_fields, single_lvl_fields = _split_fields(fieldslist)
 
     # formatting datetimes
     validdate = _str_to_dt(d['validate'][0])
