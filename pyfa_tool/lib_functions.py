@@ -107,7 +107,7 @@ def _get_fa_metadata(fa_filepath, fieldsdf=None,
 
     # Run Rscript to generete a json file with meta info
     r_script = os.path.join(main_path, 'modules', 'rfa_scripts', 'get_field.R')
-    subprocess.call(["/usr/bin/Rscript", r_script,
+    subprocess.call([os.path.join(_get_rbin(), 'Rscript'), r_script,
                      fa_filepath, fieldname, '2dfield', tmpdir])
 
     # check if json is created
@@ -273,7 +273,7 @@ def get_fieldnames(fa_filepath, tmpdir=None, rm_tmpdir=True):
 
     # Run Rscript to generete a json file with all info
     r_script = os.path.join(main_path, 'modules', 'rfa_scripts', 'get_fieldnames.R')
-    subprocess.call(["/usr/bin/Rscript", r_script, fa_filepath, tmpdir])
+    subprocess.call([os.path.join(_get_rbin(), 'Rscript'), r_script, fa_filepath, tmpdir])
 
     # check if json is created
     jsonpath = os.path.join(tmpdir, 'fields.json')
@@ -377,7 +377,7 @@ def get_2d_field(fa_filepath, fieldname, fieldnamesdf=None,
 
     # Run Rscript to generete json files with data and meta info
     r_script = os.path.join(main_path, 'modules', 'rfa_scripts', 'get_field.R')
-    subprocess.call(["/usr/bin/Rscript", r_script,
+    subprocess.call([os.path.join(_get_rbin(), 'Rscript'), r_script,
                      fa_filepath, fieldname, '2dfield', tmpdir])
 
     # check if json is created
@@ -467,7 +467,7 @@ def get_3d_field(fa_filepath, fieldname, fieldnamesdf=None,
 
     # Run Rscript to generete json files with data and meta info
     r_script = os.path.join(main_path, 'modules', 'rfa_scripts', 'get_field.R')
-    subprocess.call(["/usr/bin/Rscript", r_script,
+    subprocess.call([os.path.join(_get_rbin(), 'Rscript'), r_script,
                      fa_filepath, d3_fieldname, '3dfield', tmpdir])
 
     # TODO: check if the rbin is required! If so use the following expression as example:
