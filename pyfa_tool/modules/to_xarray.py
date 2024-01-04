@@ -49,6 +49,10 @@ def save_as_nc(xrdata, outputfolder, filename, overwrite=False, **kwargs):
     if (IO.check_file_exist(target_file) & (not overwrite)):
         sys.exit(f'{target_file} already exists.')
 
+    # Remove file if ovrwrite is True
+    if (IO.check_file_exist(target_file) & (overwrite)):
+        os.remove(target_file)
+
     # convert to nc
     xrdata.to_netcdf(path=target_file,
                      mode='w',
