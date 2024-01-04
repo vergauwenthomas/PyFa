@@ -26,7 +26,7 @@ main_path = os.path.dirname(__file__)
 
 def setup_shell_command():
     """
-    When colling this function, the CLI PyFa is activated on your system.
+    When calling this function, the CLI PyFa is activated on your system.
 
     Returns
     -------
