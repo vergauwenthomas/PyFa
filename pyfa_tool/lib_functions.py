@@ -11,10 +11,13 @@ import os
 import sys
 import subprocess
 import shutil
+# from datetime import datetime, timedelta
+# import numpy as np
 
 
 from .modules import IO, to_xarray
 from .modules.describe_module import describe_fa_from_json
+
 
 
 main_path = os.path.dirname(__file__)
@@ -318,6 +321,38 @@ def field_exists(fielddf, fieldname):
 # =============================================================================
 # To Xarray convertors
 # =============================================================================
+
+
+def all_in_one(fa_filepath):
+
+    if not IO.check_file_exist(fa_filepath):
+        sys.exit(f'{fa_filepath} is not a file.')
+
+    # create at tmpdir if not provided
+    tmpdir = IO.create_tmpdir(location=os.getcwd())
+
+
+    # Run Rscript to generete json files with data and meta info
+    r_script = os.path.join(main_path, 'modules', 'rfa_scripts', 'get_all_fields.R')
+    # subprocess.call([os.path.join(_get_rbin(), 'Rscript'), r_script,
+    #                   fa_filepath, tmpdir])
+    print(r_script)
+    convert_fa = subprocess.Popen([os.path.join(_get_rbin(), 'Rscript'), r_script,
+                      fa_filepath, tmpdir])
+    exit_code = convert_fa.wait() #wait until finished before continuing
+
+
+    # read in the json file
+    jsonfile = os.path.join(tmpdir, "FA.json")
+
+
+    ds = to_xarray.json_to_full_dataset(jsonfile)
+    return ds
+
+
+
+
+
 
 
 def get_2d_field(fa_filepath, fieldname, fieldnamesdf=None,
