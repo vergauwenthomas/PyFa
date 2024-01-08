@@ -126,10 +126,12 @@ for (basename in basenames3D) {
       ny = attr(y, "domain")$ny
       nlev=attr(x,  'frame')$nlev
       #write data
+      print("write data of")
+      print(basename)
       toadd <- list('data'=array(y, dim=c(nx, ny, nlev)),
                     'type'='3d')
-      data[fieldname] = list(toadd)
-
+      data[basename] = list(toadd)
+      print('writing done')
     },
     #if an error occurs, tell me the error
     error=function(e) {

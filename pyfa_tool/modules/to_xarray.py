@@ -63,6 +63,16 @@ def save_as_nc(xrdata, outputfolder, filename, overwrite=False, **kwargs):
     return None
 
 
+def read_netCDF(file, **kwargs):
+    # Check if file exist
+    if not IO.check_file_exist(file):
+        sys.exit(f'{file} does not exist.')
+
+    ds = xr.open_dataset(file, **kwargs)
+    return ds
+
+
+
 # =============================================================================
 # Formatters
 # =============================================================================
@@ -95,11 +105,37 @@ def _fmt_2d_field_to_matrix(datalist, xcoords):
 
 
 
+def _fmt_3d_field_to_matrix(datalist):
+    # convert to matrix with these dimensions: (y, x, levels)
+    mat =np.asarray(datalist).transpose((1,0,2))
+    return mat
+
+
+def _make_level_dimension(nlev):
+    levlist = list(np.arange(nlev))
+    return np.asarray(levlist)
+
+
+def reproject(dataset, target_epsg='EPSG:4326', nodata=-999):
+    print(f'Reprojecting dataset to {target_epsg}.')
+    # I am not a fan of -999 as nodata, but it must be a value that
+    # can be typecast to integer (rasterio thing?)
+
+    ds = dataset.transpose('level', 'y', 'x')
+    for fieldname in list(ds.variables):
+        # only applicable on xarray, not on dataset
+        ds[fieldname].rio.write_nodata(nodata, inplace=True)
+
+    # ds.rio.write_nodata(np.nan, inplace=True)
+    ds = ds.rio.reproject(target_epsg, nodata=nodata)
+    # remove no data
+    ds = ds.where(ds != nodata)
+    return ds
 
 
 
-
-def json_to_full_dataset(jsonfile):
+def json_to_full_dataset(jsonfile, reproj=True, target_epsg='EPSG:4326', nodata=-999):
+    print('Reading json data')
     data = IO.read_json(jsonfile)
 
     metadict = {
@@ -114,7 +150,7 @@ def json_to_full_dataset(jsonfile):
         'nx': int(data['pyfa_metadata']['nx'][0]),
         'ny': int(data['pyfa_metadata']['ny'][0]),
         'dx': int(data['pyfa_metadata']['dx'][0]),
-        'dy': int(data['pyfa_metadata']['ny'][0]),
+        'dy': int(data['pyfa_metadata']['dy'][0]),
         'ex': int(data['pyfa_metadata']['ex'][0]),
         'ey': int(data['pyfa_metadata']['ey'][0]),
         'center_lon': float(data['pyfa_metadata']['center_lon'][0]),
@@ -145,105 +181,37 @@ def json_to_full_dataset(jsonfile):
                                                         xcoords = xcoords)
                     data_vars_2d[fieldname] = (["y", "x"], dataarray)
                 elif val['type'] == ['3d']:
-                    sys.exit('nog te implementeren')
+                    fieldname = _fmt_fieldname(key)
+                    dataarray = _fmt_3d_field_to_matrix(datalist=val['data'])
+                    data_vars_3d[fieldname] = (["y", "x", 'level'], dataarray)
                 else:
                     sys.exit(f'unknown type {val["type"]} for {key}')
 
+    # Combine 2D and 3D fields
+    data_vars_2d.update(data_vars_3d)
 
+    # Create the xarray Dataset
     ds = xr.Dataset(data_vars=data_vars_2d,
                     coords={'x': xcoords,
                             'y': ycoords,
+                            'level': _make_level_dimension(metadict['nlev'])
                             },
-                    # dims=["y", "x"]
                     )
+    # Set dimension order (this is a convention (rioxarray likes the spatial coordiantes as last))
+    ds = ds.transpose('level', 'y', 'x')
+
+    # Metadata
+    # meta_dict = {key: val[0] for key, val in data.items() if key in ['name', 'basedate', 'validate', 'leadtime', 'timestep', 'origin']}
+    ds.attrs.update(metadict)
+
+    # Set projection crs
+    ds = ds.rio.write_crs(ds.attrs['projection'])
+    ds = ds.rio.set_spatial_dims('x', 'y', inplace=True)
+
+    if reproj:
+        ds = reproject(dataset=ds,
+                       target_epsg=target_epsg,
+                       nodata=nodata)
+
     return ds
 
-
-
-
-# def json_to_rioxarray(json_data_path, json_metadata_path, reproject=True, target_epsg="EPSG:4326"):
-#     """
-#     Create a xarray.DataArray from the data and metadata files (jsons).
-
-#     The data can be reprojected to other CRS if required.
-
-#     Parameters
-#     ----------
-#     json_data_path : str
-#         Path to the json file containing the data.
-#     json_metadata_path : str
-#         Path to the json file containing the metadata.
-#     reproj : bool, optional
-#         If True, the field will be reprojected by using the target_crs. The
-#         default is True.
-#     target_crs : str, optional
-#         EPSG code for the desired CRS of the xarray.DataArray. The default is
-#         'EPSG:4326'.
-
-#     Returns
-#     -------
-#     data_xr : xarray.DataArray
-#         The data from the json files contained in a xarray.DataArray object.
-
-#     """
-#     # =============================================================================
-#     #  Read json file
-#     # =============================================================================
-
-#     # Opening JSON files
-#     data = IO.read_json(json_data_path)
-#     metadata = IO.read_json(json_metadata_path)
-#     data.update(metadata)
-
-#     # =============================================================================
-#     # Data to xarray
-#     # =============================================================================
-
-#     if len(np.array(data['data']).shape) == 2:
-#         # 2D field
-#         data_xr = xr.DataArray(np.asarray(data['data']).transpose(),
-#                                coords={'x': np.asarray(data['xcoords']),
-#                                        'y': np.asarray(data['ycoords']),
-#                                        },
-#                                dims=["y", "x"])
-
-#     elif len(np.array(data['data']).shape) == 3:
-#         # 3D field
-#         data_xr = xr.DataArray(np.array(data['data']).transpose((1, 0, 2)),
-#                                coords={'x': np.asarray(data['xcoords']),
-#                                        'y': np.asarray(data['ycoords']),
-#                                        'level': np.asarray(data['zcoords'])
-#                                        },
-#                                dims=["y", "x", "level"])
-
-#         data_xr = data_xr.transpose('level', 'y', 'x')  # reorder for transformating
-
-#     data_xr.rio.set_spatial_dims('x', 'y', inplace=True)
-
-#     # =============================================================================
-#     # add metadata
-#     # =============================================================================
-#     meta_dict = {key: val[0] for key, val in data.items() if key in ['name', 'basedate', 'validate', 'leadtime', 'timestep', 'origin']}
-#     data_xr.attrs.update(meta_dict)
-
-#     # =============================================================================
-#     # add projection info
-#     # =============================================================================
-
-#     proj_dict = {key: val[0] for key, val in data.items() if key in ['projection', 'lon_0', 'lat_1', 'lat_2', 'proj_R', 'nx', 'ny', 'dx', 'dy', 'ex', 'ey']}
-
-#     proj4str = f'+proj={proj_dict["projection"]} +lat_1={proj_dict["lat_1"]} +lat_2={proj_dict["lat_2"]} ' + \
-#         f'+lon_0={proj_dict["lon_0"]} +R={proj_dict["proj_R"]}'
-
-#     data_xr = data_xr.rio.write_crs(proj4str)
-
-#     # =============================================================================
-#     # Reproject to latlon
-#     # =============================================================================
-#     if reproject:
-#         data_xr = data_xr.rio.reproject(target_epsg)
-
-#     # remove no data
-#     data_xr = data_xr.where(data_xr != data_xr.rio.nodata)
-
-#     return data_xr

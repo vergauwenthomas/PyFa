@@ -323,7 +323,7 @@ def field_exists(fielddf, fieldname):
 # =============================================================================
 
 
-def all_in_one(fa_filepath):
+def get_full_fa(fa_filepath, rm_tmpdir=True, reproj=False, target_epsg='EPSG:4326', nodata=-999):
 
     if not IO.check_file_exist(fa_filepath):
         sys.exit(f'{fa_filepath} is not a file.')
@@ -331,12 +331,9 @@ def all_in_one(fa_filepath):
     # create at tmpdir if not provided
     tmpdir = IO.create_tmpdir(location=os.getcwd())
 
-
     # Run Rscript to generete json files with data and meta info
     r_script = os.path.join(main_path, 'modules', 'rfa_scripts', 'get_all_fields.R')
-    # subprocess.call([os.path.join(_get_rbin(), 'Rscript'), r_script,
-    #                   fa_filepath, tmpdir])
-    print(r_script)
+
     convert_fa = subprocess.Popen([os.path.join(_get_rbin(), 'Rscript'), r_script,
                       fa_filepath, tmpdir])
     exit_code = convert_fa.wait() #wait until finished before continuing
@@ -345,8 +342,15 @@ def all_in_one(fa_filepath):
     # read in the json file
     jsonfile = os.path.join(tmpdir, "FA.json")
 
+    # Convert to a xarray dataset
+    ds = to_xarray.json_to_full_dataset(jsonfile,
+                                        reproj=reproj,
+                                        target_epsg=target_epsg,
+                                        nodata=nodata)
 
-    ds = to_xarray.json_to_full_dataset(jsonfile)
+    if rm_tmpdir:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
     return ds
 
 
