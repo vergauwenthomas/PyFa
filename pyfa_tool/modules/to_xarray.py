@@ -142,8 +142,7 @@ def json_to_full_dataset(jsonfile):
                 if val['type'] == ['2d']:
                     fieldname = _fmt_fieldname(key)
                     dataarray = _fmt_2d_field_to_matrix(datalist=val['data'],
-                                                        xcoords = xcoords,
-                                                        ycoords=ycoords)
+                                                        xcoords = xcoords)
                     data_vars_2d[fieldname] = (["y", "x"], dataarray)
                 elif val['type'] == ['3d']:
                     sys.exit('nog te implementeren')
