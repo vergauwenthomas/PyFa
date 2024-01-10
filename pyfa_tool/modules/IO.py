@@ -67,30 +67,21 @@ def create_tmpdir(location, tmpdir_name='tmp_fajson'):
     return tmpdir_path
 
 def remove_tempdir(tmpdirpath):
+    """
+    Delete a folder and all its branches.
+
+    Parameters
+    ----------
+    tmpdirpath : str
+        The folder to delete.
+
+    Returns
+    -------
+    None.
+
+    """
     shutil.rmtree(tmpdirpath, ignore_errors=True)
 
-
-# =============================================================================
-# Kwargs handling
-# =============================================================================
-
-def make_kwarg_dict(kwargstring):
-    seperators = ['=', ':']
-
-    kwa_dict = {}
-    for item in kwargstring:
-        for sep in seperators:
-            kwarg_item = item.split(sep)
-            if len(kwarg_item) == 2:
-                break
-
-        # check if argument is numeric
-        key, value = kwarg_item[0], kwarg_item[1]
-        if value.isnumeric():
-            value=float(value)
-        kwa_dict[key] = value
-
-    return kwa_dict
 
 
 # =============================================================================
@@ -98,6 +89,24 @@ def make_kwarg_dict(kwargstring):
 # =============================================================================
 
 def read_json(jsonpath, to_dataframe=False):
+    """
+    Read a json file.
+
+
+    Parameters
+    ----------
+    jsonpath : str
+        Path of the json file.
+    to_dataframe : bool, optional
+        If True, the data is converted to a pandas.DataFrame, else a
+        dictionary is returned. The default is False.
+
+    Returns
+    -------
+    data : dict or pandas.DataFrame
+        The data of the json file.
+
+    """
     f = open(jsonpath)
     data = json.load(f)
     f.close()
@@ -107,6 +116,24 @@ def read_json(jsonpath, to_dataframe=False):
     return data
 
 def write_json(datadict, jsonpath, force=False):
+    """
+    Write a dictionary to a json file.
+
+    Parameters
+    ----------
+    datadict : dict
+        The dictionary to write to file.
+    jsonpath : str
+        The path of the target json file.
+    force : bool, optional
+        If True, the jsonpath file (if it already exists) will be overwritten,
+        else an error will be thrown. The default is False.
+
+    Returns
+    -------
+    None.
+
+    """
     if check_file_exist(jsonpath):
         if not force:
             sys.exit(f'{jsonpath} already exists.')
@@ -117,12 +144,13 @@ def write_json(datadict, jsonpath, force=False):
 # tabular data IO
 # =============================================================================
 
-def write_to_csv(data, filepath):
-    if isinstance(data, type(pd.DataFrame)):
-        data.to_csv(filepath, index=False)
-    else:
-        data = pd.DataFrame(data)
-        data.to_csv(filepath,  index=False)
+# def write_to_csv(data, filepath):
+
+#     if isinstance(data, type(pd.DataFrame)):
+#         data.to_csv(filepath, index=False)
+#     else:
+#         data = pd.DataFrame(data)
+#         data.to_csv(filepath,  index=False)
 
 
 # =============================================================================
@@ -202,6 +230,22 @@ def save_as_nc(xrdata, outputfolder, filename, overwrite=False, **kwargs):
 
 
 def read_netCDF(file, **kwargs):
+    """
+    Import a netCDF file into a xarray Dataset.
+
+    Parameters
+    ----------
+    file : str
+        Path of the netCDF file to import.
+    **kwargs : optional
+        kwargs are passed to the xarray.open_dataset() function.
+
+    Returns
+    -------
+    ds : xr.DataSet
+        The Dataset object of the netCDF file.
+
+    """
     # Check if file exist
     if not check_file_exist(file):
         sys.exit(f'{file} does not exist.')
