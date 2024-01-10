@@ -26,8 +26,23 @@ from pyfa_tool import package_path
 
 
 class FaFile():
-    """For interacting only with metadata of FA files."""
+    """A Class that holds metadata and fieldnames of a FA file."""
     def __init__(self, fafile):
+        """
+        Initiate a FAFile object.
+
+        (The fieldnames and metadata are read on initiation.)
+
+        Parameters
+        ----------
+        fafile : str
+            The path of the FA file.
+
+        Returns
+        -------
+        None.
+
+        """
         # test if file exist
         if not IO.check_file_exist(fafile):
             sys.exit(f'{fafile} is not a file.')
@@ -39,35 +54,92 @@ class FaFile():
 
         self._read_metadata()
 
-    # ------- Special functions ------------
+    # =========================================================================
+    #     Special functions ------------
+    # =========================================================================
 
     def __str__(self):
         return f'FA-file at {self.fafile}'
     def __repr__(self):
         return f'FA-file at {self.fafile}'
 
-    # -------- Getters/Setters -------------
+    # =========================================================================
+    #     Getters/Setters -------------
+    # =========================================================================
 
     def get_fieldnames(self):
+        """
+        Get the possible fieldnames in a dataframe
+
+        Returns
+        -------
+        pandas.DataFrame
+            A Dataframe with all possible fields.
+
+        """
         return self.fielddf
 
     def get_metadata(self):
+        """
+        Get general metadata (applicable to all fields).
+
+        Returns
+        -------
+        dict
+            Dictionary with all general metadata.
+
+        """
         return self.metadata
 
-    # -------- Methods ---------------------
+    # =========================================================================
+    #  Methods
+    # =========================================================================
 
     def describe(self):
+        """
+        Print out a detailed description on the FA content.
+
+        Returns
+        -------
+        None.
+
+        """
         describe_module.describe_fa_from_json(metadata=self.metadata,
                                               fieldslist=self.fielddf.to_dict('records'))
 
 
-    # -------- Helpers --------------------
+    # =========================================================================
+    #     Helpers --------------------
+    # =========================================================================
+
     def _list_all_2d_fieldnames_as_2d_fields(self):
+        """
+        Get a list of all pure-2D fields.
+
+        (A pure 2D field is a field which is not defined at multiple levels.)
+
+        Returns
+        -------
+        only_2d_fields : list
+            list of 2D fieldnames.
+
+        """
         # find 3d fieldnames in the fielddf
         only_2d_fields = list(set([f for f in self.fielddf['name'] if (not((f.startswith('S')) & (f[1:3].isnumeric())))]))
         return only_2d_fields
 
     def _list_all_fieldnames_as_2d_fields(self):
+        """
+        Get a list of all fields.
+
+        (Thus these include all the pure 2D fields, and the 2D parts of a 3D
+         field (i.g. S013TEMPERATURE))
+        Returns
+        -------
+        list
+            list of all fieldnames
+
+        """
         return self.fielddf['name'].to_list()
     def _list_all_3d_fieldnames_as_basenames(self):
         """
@@ -75,11 +147,6 @@ class FaFile():
 
         (The basisfieldname is the fieldname without the level identifier. So
           S012TEMPERATURE has TEMPERATURE as basisfieldname)
-
-        Parameters
-        ----------
-        fielddf : pandas.DataFrame
-            Available fields information in a Dataframe.
 
         Returns
         -------
@@ -95,27 +162,17 @@ class FaFile():
 
     def _read_metadata(self):
         """
-        TODO update this docstring
-
         Extract the fieldnames and metadata from an fa_filepath.
 
         This function will execute get_all_metadata.R, that will write all the
         fielnames and the metadata to json files. These files are read and
         formatted.
 
-        Parameters
-        ----------
-        fa_filepath : str
-            Path of the FA file.
-        tmpdir : str
-            Path of the folder to save the json files to.
+        The .metadata and .fielddf attributes are set.
 
         Returns
         -------
-        fielddata : pandas.dataframe
-            A dataframe containing all the fieldnames and basic info.
-        metadata : dict
-            A dictionary with metadata of the FA file.
+        None
 
         """
         # create at tmpdir if not provided
@@ -149,9 +206,29 @@ class FaFile():
 
 
 class FaDataset():
-    """For storing and analysing FA data as xarray."""
-    def __init__(self, fafile=None, nodata=-999):
+    """A Class that holds data, and methods, of an FA file."""
 
+    def __init__(self, fafile=None, nodata=-999):
+        """
+        Initiate of an FaDataset object.
+
+        Parameters
+        ----------
+        fafile : str, optional
+            Path of the target FA-file. The default is None.
+        nodata : int, optional
+            The Nodata value to be used by (rio)xarray. The default is -999.
+
+        Returns
+        -------
+        None.
+
+        Note
+        -------
+        Rasterio uses an integer value of the nodata, so make sure an
+        integer-casting of the nodata value exists.
+
+        """
         # test if file exist
         if not fafile is None:
             if not IO.check_file_exist(fafile):
@@ -176,11 +253,33 @@ class FaDataset():
     # Setters / Getters
     # =============================================================================
     def set_fafile(self, fafile):
+        """
+        Update the path to the FA-file.
+
+        Parameters
+        ----------
+        fafile : str
+            Path to the FA-file.
+
+        Returns
+        -------
+        None.
+
+        """
         if not IO.check_file_exist(fafile):
             sys.exit(f'{fafile} is not a file.')
         self.fafile = fafile
 
     def get_fieldnames(self):
+        """
+        Get all present variables
+
+        Returns
+        -------
+        list
+            A list of all the availabel variables.
+
+        """
         return self._get_physical_variables()
 
 
