@@ -1,4 +1,3 @@
-
 #!/usr/bin/env Rscript
 library(meteogrid)
 library(Rfa)
@@ -7,6 +6,20 @@ library(Rfa)
 library(data.table)
 library(jsonlite)
 
+
+# ==============================================================================
+# This script will:
+#
+# 1. Open an FA file with Rfa
+# 2. find ALL 2D and 3D fields
+# 3. find general metadata + coordinates from the first 2D field and add it to a list
+# 3. Read all 2D fields and add it to the list
+# 4. Read all 3D fields + construct the coordinates and add it to the list
+# 5. All data is writed to a json file ('FA.json') in the output folder
+# ==============================================================================
+
+
+
 #filename = "/home/thoverga/Documents/github/PyFa-tool/development/fa_files/20200801/PFAR07csm07+0004"
 #outputdir="/home/thoverga/Documents/github/PyFa-tool/tests/data"
 
@@ -14,11 +27,24 @@ library(jsonlite)
 
 
 # -----------------------IO -------------------------------------------
-# args
 
 args = commandArgs(trailingOnly=TRUE)
 filename = args[1]
 outputdir = args[2]
+extra_attr_file = args[3]
+
+#TODO:
+#lees hier de json file met whitelist en blacklists
+
+# ---------------------------------------------
+# ------------ read special attributes -------------
+#----------------------------------------------
+extra_attrs = fromJSON(extra_attr_file)
+d2_whitelist=extra_attrs$`2d_white`
+d3_whitelist=extra_attrs$`3d_white`
+d2_blacklist=extra_attrs$`2d_black`
+d3_blacklist=extra_attrs$`3d_black`
+
 
 # ---------------------------------------------
 # ------------ Get all fieldnames -------------
@@ -94,56 +120,69 @@ toadd <- list('basedate'=toString(attr(y, "info")$time$basedate),
 data['pyfa_metadata'] = list(toadd)
 
 
-
 #Loop over all fields
 for (fieldname in fieldnames2D) {
-  print(fieldname)
-  tryCatch(
-    #try to do this
-    {
-      y = FAdec(x, fieldname)
-      toadd <- list('data'=array(y[]), 'type'='2d')
-      data[fieldname] = list(toadd)
+  if (trimws(fieldname) %in% d2_whitelist){
+    if (trimws(fieldname) %in% d2_blacklist){
+      print(paste0(fieldname, ' rejected by blacklist'))
+    }else{
+      tryCatch(
+        #try to do this
+        {
+          print(paste0(fieldname, ' reading ...'))
+          y = FAdec(x, fieldname)
+          toadd <- list('data'=array(y[]), 'type'='2d')
+          data[fieldname] = list(toadd)
 
-    },
-    #if an error occurs, tell me the error
-    error=function(e) {
-      message('An Error Occurred for this 2D field')
-      print(e)
+        },
+        #if an error occurs, tell me the error
+        error=function(e) {
+          message('An Error Occurred for this 2D field')
+          print(e)
+        }
+      )
     }
-  )
+  }else{
+    print(paste0(fieldname, ' not in whitelist'))
+  }
 }
 
 
-for (basename in basenames3D) {
-  print(basename)
-  tryCatch(
-    #try to do this
-    {
-      y = FAdec3d(x, par=basename, plevels.out = NULL)
-      # Specific 3dfield data attr
-      nx = attr(y, "domain")$nx
-      ny = attr(y, "domain")$ny
-      nlev=attr(x,  'frame')$nlev
-      #write data
-      print("write data of")
-      print(basename)
-      toadd <- list('data'=array(y, dim=c(nx, ny, nlev)),
-                    'type'='3d')
-      data[basename] = list(toadd)
-      print('writing done')
-    },
-    #if an error occurs, tell me the error
-    error=function(e) {
-      message('An Error Occurred for this 3d field')
-      print(e)
-    }
-  )
 
+
+for (basename in basenames3D) {
+  if (trimws(basename) %in% d3_whitelist){
+    if (trimws(basename) %in% d3_blacklist){
+      print(paste0(basename, ' rejected by blacklist'))
+    }else{
+      tryCatch(
+        #try to do this
+        {
+          print(paste0(basename, ' reading ...'))
+          y = FAdec3d(x, par=basename, plevels.out = NULL)
+          # Specific 3dfield data attr
+          nx = attr(y, "domain")$nx
+          ny = attr(y, "domain")$ny
+          nlev=attr(x,  'frame')$nlev
+          #write data
+          toadd <- list('data'=array(y, dim=c(nx, ny, nlev)),
+                        'type'='3d')
+          data[basename] = list(toadd)
+        },
+        #if an error occurs, tell me the error
+        error=function(e) {
+          message('An Error Occurred for this 3d field')
+          print(e)
+        }
+      )
+    }
+  }else{
+    print(paste0(basename, ' not in whitelist'))
+  }
 }
 
 
 # write to json
 exportJSON <- toJSON(data)
 write(exportJSON, file.path(outputdir, "FA.json"))
-end_time <- Sys.time()
+

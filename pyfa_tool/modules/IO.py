@@ -7,15 +7,22 @@ Collection of functions for reading/writing/copying/... files
 @author: thoverga
 """
 import os
+import sys
 import json
 import string
 import random
 import pandas as pd
+import subprocess
+import shutil
+import xarray as xr
+
+
+
 
 
 
 # =============================================================================
-# Creating/chekking paths
+# Creating/chekking paths/deleting
 # =============================================================================
 
 def check_file_exist(filepath):
@@ -59,6 +66,10 @@ def create_tmpdir(location, tmpdir_name='tmp_fajson'):
     os.makedirs(tmpdir_path)
     return tmpdir_path
 
+def remove_tempdir(tmpdirpath):
+    shutil.rmtree(tmpdirpath, ignore_errors=True)
+
+
 # =============================================================================
 # Kwargs handling
 # =============================================================================
@@ -95,6 +106,12 @@ def read_json(jsonpath, to_dataframe=False):
         data = pd.DataFrame(data)
     return data
 
+def write_json(datadict, jsonpath, force=False):
+    if check_file_exist(jsonpath):
+        if not force:
+            sys.exit(f'{jsonpath} already exists.')
+    with open(jsonpath, 'w') as f:
+        json.dump(datadict, f)
 
 # =============================================================================
 # tabular data IO
@@ -108,5 +125,88 @@ def write_to_csv(data, filepath):
         data.to_csv(filepath,  index=False)
 
 
+# =============================================================================
+# OS R related
+# =============================================================================
+def _get_rbin():
+    """Funtion to extract the Rbin of your environment"""
+    # Write very simple R script in curdir
+    r_miniscript = os.path.join(os.getcwd(), 'mini_R_script.R')
+    with open(r_miniscript, 'w') as f:
+        f.write('R.home("bin")')
 
+    # Execure script and extract the rbin
+    result = subprocess.run(['Rscript', r_miniscript], capture_output=True, text=True)
+    rbin = result.stdout.split('"')[1]
+
+    # Delete basic r script
+    try:
+        os.remove(r_miniscript)
+    except OSError:
+        pass
+
+    return rbin
+
+
+# =============================================================================
+# netCDF related
+# =============================================================================
+
+
+def save_as_nc(xrdata, outputfolder, filename, overwrite=False, **kwargs):
+    """
+    Save an Xarray object to a NetCDF file.
+
+    Parameters
+    ----------
+    xrdata : xarray.DataArray or xarray.DataSet
+        The Xarray data object to save.
+    outputfolder : str
+        Path of the directory to save the NetCDF.
+    filename : str
+        Name of the netCDF file. (.nc extenstion is added if not provided.)
+    overwrite : bool, optional
+        If False, the xarray object is not saved if the netCDF file already
+        exists. The default is False.
+    **kwargs : optional
+        kwargs are passed to the .to_netcdf() method of the xarray object.
+
+    Returns
+    -------
+    None.
+
+    """
+    # check fileneme extension
+    if not filename.endswith('.nc'):
+        filename = filename + '.nc'
+
+    # check if outputfolder exists
+    if not check_folder_exist(outputfolder):
+        sys.exit(f'{outputfolder} directory not found.')
+
+    # check if file exist
+    target_file = os.path.join(outputfolder, filename)
+    if (check_file_exist(target_file) & (not overwrite)):
+        sys.exit(f'{target_file} already exists.')
+
+    # Remove file if ovrwrite is True
+    if (check_file_exist(target_file) & (overwrite)):
+        os.remove(target_file)
+
+    # convert to nc
+    xrdata.to_netcdf(path=target_file,
+                      mode='w',
+                      **kwargs)
+    print(f'Data saved to {target_file}')
+    return None
+
+
+def read_netCDF(file, **kwargs):
+    # Check if file exist
+    if not check_file_exist(file):
+        sys.exit(f'{file} does not exist.')
+
+    ds = xr.open_dataset(file, **kwargs)
+
+    return ds
 

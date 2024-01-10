@@ -8,32 +8,156 @@ Created on Mon Jan  8 13:50:41 2024
 
 import os
 import sys
-
+from collections.abc import Iterable
+import subprocess
 import numpy as np
 import xarray as xr
 import rioxarray
 from datetime import datetime, timedelta
 
 
-from pyfa_tool.lib_functions import get_full_fa, field_exists
-from pyfa_tool.modules.to_xarray import reproject, save_as_nc, read_netCDF
-from pyfa_tool.modules.plotting import make_regular_fig, make_platcarree_fig, make_plot
+import pyfa_tool.modules.IO as IO
+import pyfa_tool.modules.geospatial_functions as geospatial_func
+import pyfa_tool.modules.reading_fa as reading_fa
+import pyfa_tool.modules.plotting as plotting
+import pyfa_tool.modules.describe_module as describe_module
+
+from pyfa_tool import package_path
 
 
 class FaFile():
-    """For interacting with FA files without storing data."""
+    """For interacting only with metadata of FA files."""
     def __init__(self, fafile):
+        # test if file exist
+        if not IO.check_file_exist(fafile):
+            sys.exit(f'{fafile} is not a file.')
+
         self.fafile = fafile
 
+        self.metadata = None #dict with metadata
+        self.fielddf = None #df with fields
+
+        self._read_metadata()
+
+    # ------- Special functions ------------
+
+    def __str__(self):
+        return f'FA-file at {self.fafile}'
+    def __repr__(self):
+        return f'FA-file at {self.fafile}'
+
+    # -------- Getters/Setters -------------
+
+    def get_fieldnames(self):
+        return self.fielddf
+
+    def get_metadata(self):
+        return self.metadata
+
+    # -------- Methods ---------------------
+
+    def describe(self):
+        describe_module.describe_fa_from_json(metadata=self.metadata,
+                                              fieldslist=self.fielddf.to_dict('records'))
 
 
+    # -------- Helpers --------------------
+    def _list_all_2d_fieldnames_as_2d_fields(self):
+        # find 3d fieldnames in the fielddf
+        only_2d_fields = list(set([f for f in self.fielddf['name'] if (not((f.startswith('S')) & (f[1:3].isnumeric())))]))
+        return only_2d_fields
+
+    def _list_all_fieldnames_as_2d_fields(self):
+        return self.fielddf['name'].to_list()
+    def _list_all_3d_fieldnames_as_basenames(self):
+        """
+        Create a list of all basisfieldnames which occures at multiple levels.
+
+        (The basisfieldname is the fieldname without the level identifier. So
+          S012TEMPERATURE has TEMPERATURE as basisfieldname)
+
+        Parameters
+        ----------
+        fielddf : pandas.DataFrame
+            Available fields information in a Dataframe.
+
+        Returns
+        -------
+        basis_3d_names : list
+            List of basisnames for present 3D fields.
+
+        """
+        # find 3d fieldnames in the fielddf
+        basis_3d_names = list(set([f[4:] for f in self.fielddf['name'] if ((f.startswith('S')) & (f[1:3].isnumeric()))]))
+        return basis_3d_names
+
+
+
+    def _read_metadata(self):
+        """
+        TODO update this docstring
+
+        Extract the fieldnames and metadata from an fa_filepath.
+
+        This function will execute get_all_metadata.R, that will write all the
+        fielnames and the metadata to json files. These files are read and
+        formatted.
+
+        Parameters
+        ----------
+        fa_filepath : str
+            Path of the FA file.
+        tmpdir : str
+            Path of the folder to save the json files to.
+
+        Returns
+        -------
+        fielddata : pandas.dataframe
+            A dataframe containing all the fieldnames and basic info.
+        metadata : dict
+            A dictionary with metadata of the FA file.
+
+        """
+        # create at tmpdir if not provided
+        tmpdir = IO.create_tmpdir(location=os.getcwd())
+        # Run Rscript to generete a json file with all info
+        r_script = os.path.join(package_path, 'modules', 'rfa_scripts',
+                                'get_all_metadata.R')
+        subprocess.call([os.path.join(IO._get_rbin(), 'Rscript'), r_script,
+                         self.fafile, tmpdir])
+
+
+        fields_jsonpath = os.path.join(tmpdir, 'fields.json')
+        metadata_jsonpath = os.path.join(tmpdir, 'metadata.json')
+
+        # Read the json files
+        fielddata = IO.read_json(jsonpath=fields_jsonpath,
+                                 to_dataframe=True)
+        metadata = IO.read_json(jsonpath=metadata_jsonpath,
+                                 to_dataframe=False)
+
+        # Remove trailing and leading whitespace from fieldnames
+        fielddata['name'] = [fieldname.strip() for fieldname in fielddata['name']]
+
+        # update attributes
+        self.metadata = metadata
+        self.fielddf = fielddata
+
+        IO.remove_tempdir(tmpdir)
 
 
 
 
 class FaDataset():
     """For storing and analysing FA data as xarray."""
-    def __init__(self, nodata=-999):
+    def __init__(self, fafile=None, nodata=-999):
+
+        # test if file exist
+        if not fafile is None:
+            if not IO.check_file_exist(fafile):
+                sys.exit(f'{fafile} is not a file.')
+
+        self.fafile = fafile
         self.ds = None # xarray.Dataset
         self.nodata = nodata
 
@@ -51,6 +175,10 @@ class FaDataset():
     # =============================================================================
     # Setters / Getters
     # =============================================================================
+    def set_fafile(self, fafile):
+        if not IO.check_file_exist(fafile):
+            sys.exit(f'{fafile} is not a file.')
+        self.fafile = fafile
 
     def get_fieldnames(self):
         return self._get_physical_variables()
@@ -59,23 +187,155 @@ class FaDataset():
     # =============================================================================
     # Importing data
     # =============================================================================
+    def import_fa(self, whitelist=None, blacklist=None,
+                  rm_tmpdir=True, reproj=False, target_epsg='EPSG:4326',
+                  nodata=-999):
+        assert not self.fafile is None, 'First set a FAfile path, using the set_fafile() method.'
 
-    def get_full_fa(self, fa_filepath, rm_tmpdir=True,
-                    reproj=False, target_epsg='EPSG:4326'):
+        # Get all available fields
+        FA = FaFile(self.fafile)
+        subset_fields = {'2d_white': [],
+                         '3d_white': [],
+                         '2d_black': [],
+                         '3d_black': []} # to add black and whitelist fields
 
-        self.ds = get_full_fa(fa_filepath=fa_filepath,
-                              rm_tmpdir=rm_tmpdir,
-                              reproj=reproj,
-                              target_epsg='EPSG:4326',
-                              nodata=self.nodata)
-
-
-    def get_2d_field(self):
-        pass
+        # ---------- Whilelist creation -------------------
 
 
-    def get_3d_field(self):
-        pass
+        if not (whitelist is None):
+            # test if the whitelist is an iterable (list/series/array):
+            if isinstance(whitelist, str):
+                whitelist = [whitelist]
+            if not isinstance(whitelist, Iterable):
+                sys.exit(f'{whitelist} is not an Iterable (like a list/array/...)')
+
+
+            # Find the 2d-whitelist fields
+            all_available_fields = FA._list_all_fieldnames_as_2d_fields()
+            subset_fields['2d_white'] = [field for field in whitelist if field in all_available_fields]
+
+            # Find the 3d-whitelist fields
+            all_available_3dfields = FA._list_all_3d_fieldnames_as_basenames()
+            subset_fields['3d_white'] = [field for field in whitelist if field in all_available_3dfields]
+
+            # Check at leas one field is included in the whitelists
+            if ((len(subset_fields['2d_white']) == 0) & (len(subset_fields['3d_white']) == 0)):
+                sys.exit(f'None of these fields are found in the FA file: {whitelist}')
+        else:
+            subset_fields['2d_white'] = FA._list_all_2d_fieldnames_as_2d_fields()
+            subset_fields['3d_white'] = FA._list_all_3d_fieldnames_as_basenames()
+
+        # ---------- Blacklist creation -------------------
+
+        if not (blacklist is None):
+            # test if the blacklist is an iterable (list/series/array):
+            if isinstance(blacklist, str):
+                blacklist = [blacklist]
+            if not isinstance(blacklist, Iterable):
+                sys.exit(f'{blacklist} is not an Iterable (like a list/array/...)')
+
+            # Get all available fields (if not yet made in the whitelist part)
+            if FA is None:
+                FA = FaFile(self.fafile)
+
+
+            # Find the 2d-blacklist fields
+            all_available_fields = FA._list_all_fieldnames_as_2d_fields()
+            subset_fields['2d_black'] = [field for field in blacklist if field in all_available_fields]
+
+            # Find the 3d-blacklist fields
+            all_available_3dfields = FA._list_all_3d_fieldnames_as_basenames()
+            subset_fields['3d_black'] = [field for field in blacklist if field in all_available_3dfields]
+
+            # Check at leas one field is included in the blacklists
+            if ((len(subset_fields['2d_white']) == 0) & (len(subset_fields['3d_white']) == 0)):
+                print(f'WARNING: None of these fields are found in the FA file: {blacklist}')
+
+
+        # create at tmpdir if not provided
+        tmpdir = IO.create_tmpdir(location=os.getcwd())
+
+        # TODO: write subset_fields to a json file in the tmpdir because
+        # there is no clean way i found to parse multiple lists as arguments
+        #for an R script.
+        Rfa_attr_json=os.path.join(tmpdir, 'Rfa_extra_attrs.json')
+        IO.write_json(datadict=subset_fields,
+                      jsonpath=Rfa_attr_json,
+                      force=True)
+
+
+        # Run Rscript to generete json files with data and meta info
+        r_script = os.path.join(package_path, 'modules',
+                                'rfa_scripts', 'get_all_fields.R')
+
+
+        convert_fa = subprocess.Popen([os.path.join(IO._get_rbin(), 'Rscript'), r_script,
+                          FA.fafile, tmpdir, Rfa_attr_json])
+
+        exit_code = convert_fa.wait() #wait until finished before continuing
+
+
+        # read in the json file
+        jsonfile = os.path.join(tmpdir, "FA.json")
+
+        # Convert to a xarray dataset
+        ds = reading_fa.json_to_full_dataset(jsonfile,
+                                            reproj=reproj,
+                                            target_epsg=target_epsg,
+                                            nodata=nodata)
+
+        if rm_tmpdir:
+            IO.remove_tempdir(tmpdir)
+
+        # Update attribute
+        self.ds = ds
+
+
+    def import_2d_field(self, fieldname,
+                        rm_tmpdir=True, reproj=False, target_epsg='EPSG:4326',
+                        nodata=-999):
+
+
+        assert not self.fafile is None, 'First set a FAfile path, using the set_fafile() method.'
+
+        # Get all available fields
+        FA = FaFile(self.fafile)
+
+        # Check if fieldname is a 2d field
+        if fieldname not in FA._list_all_2d_fieldnames_as_2d_fields():
+            sys.exit(f'{fieldname} not found in the possible 2D fields: {FA._list_all_2d_fieldnames_as_2d_fields()}')
+
+        self.import_fa(whitelist=fieldname,
+                       blacklist=None,
+                       rm_tmpdir=rm_tmpdir,
+                       reproj=reproj,
+                       target_epsg=target_epsg,
+                       nodata=nodata)
+
+
+    def import_3d_field(self, fieldname,
+                        rm_tmpdir=True, reproj=False, target_epsg='EPSG:4326',
+                        nodata=-999):
+
+        assert not self.fafile is None, 'First set a FAfile path, using the set_fafile() method.'
+
+        # Get all available fields
+        FA = FaFile(self.fafile)
+
+        # Check if fieldname is a 2d field
+        if fieldname not in FA._list_all_3d_fieldnames_as_basenames():
+            sys.exit(f'{fieldname} not found in the possible 3D fields: {FA._list_all_3d_fieldnames_as_basenames()}')
+
+        self.import_fa(whitelist=fieldname,
+                       blacklist=None,
+                       rm_tmpdir=rm_tmpdir,
+                       reproj=reproj,
+                       target_epsg=target_epsg,
+                       nodata=nodata)
+
+
+
+
 
 
     def save_nc(self, outputfolder, filename, overwrite=False, **kwargs):
@@ -91,16 +351,17 @@ class FaDataset():
         saveds.attrs['leadtime'] = saveds.attrs['leadtime'].seconds
 
 
-        save_as_nc(xrdata=saveds,
+        IO.save_as_nc(xrdata=saveds,
                    outputfolder=outputfolder,
                    filename=filename,
                    overwrite=overwrite,
                    **kwargs)
 
+
     def read_nc(self, file, **kwargs):
         if not (self.ds is None):
             sys.exit('The dataset is not empty! Use read_nc() only on an empty Dataset.')
-        ds = read_netCDF(file, **kwargs)
+        ds = IO.read_netCDF(file, **kwargs)
 
         #un-serialise special attributes
         ds.attrs['basedate'] = datetime.strptime(ds.attrs['basedate'],
@@ -109,9 +370,11 @@ class FaDataset():
                                                      '%Y-%m-%d %H:%M:%S' )
         ds.attrs['leadtime'] = timedelta(seconds=int(ds.attrs['leadtime']))
 
+        #TODO: Setup the rio projection!!
 
         self.ds = ds
         print('netCDF loaded.')
+
 
     # =============================================================================
     # Data manipulation
@@ -119,19 +382,17 @@ class FaDataset():
 
     def reproject(self, target_epsg='EPSG:4326'):
         assert not (self.ds is None), 'Empty instance of FaDataset.'
-        ds = reproject(dataset=self.ds,
-                       target_epsg=target_epsg,
-                       nodata=self.nodata)
+        ds = geospatial_func.reproject(dataset=self.ds,
+                                       target_epsg=target_epsg,
+                                       nodata=self.nodata)
         self.ds = ds
-
-
 
 
     # =============================================================================
     # Analysis of data
     # =============================================================================
-    def plot(self, variable, level=None, title=None, grid=False, land=True,
-             coastline=True, contour=False, legend=True,
+    def plot(self, variable, level=None, title=None, grid=False, land=None,
+             coastline=None, contour=False, legend=True,
              levels=10, **kwargs):
 
 
@@ -145,23 +406,35 @@ class FaDataset():
         else:
             sys.exit('something unforseen is wrong.')
 
+        # setup default values for coastline and land features
         islatlon = self. _in_latlon()
+        if land is None:
+            if islatlon:
+                land=True
+            else:
+                land=False
+
+        if coastline is None:
+             if islatlon:
+                 coastline=True
+             else:
+                 coastline=False
+
         if (land) | (coastline):
             if not islatlon:
                 sys.exit('Adding land and coastline features is only available in latlon coordinates')
 
-
         if islatlon:
-            fig, ax = make_platcarree_fig()
+            fig, ax = plotting.make_platcarree_fig()
         else:
-            fig, ax = make_regular_fig()
+            fig, ax = plotting.make_regular_fig()
 
         # create title
         if title is None:
             title =  title=f'{variable} at {self.ds.attrs["validate"]} (UTC, LT={self.ds.attrs["leadtime"]}h)'
 
 
-        ax = make_plot(dxr = xarr,
+        ax = plotting.make_plot(dxr = xarr,
                         ax=ax,
                         title=title,
                         grid=grid,
