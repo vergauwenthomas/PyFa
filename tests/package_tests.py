@@ -29,85 +29,249 @@ pyfa.setup_shell_command()
 print('Done')
 
 
-# =============================================================================
-# Get fieldnames
-# =============================================================================
-print('Running get_fieldnames in python')
-fielddf = pyfa.get_fieldnames(climate_fa)
-assert fielddf.shape[0] == 410, f'The climate FA fields are not extracted correctly'
-assert len(fielddf.columns) > 1, 'only one fieldcolumn is extracted for climate FA'
-
-
-
-fielddf = pyfa.get_fieldnames(nwp_fa)
-assert fielddf.shape[0] == 1375, 'The climate FA fields are not extracted correctly'
-assert len(fielddf.columns) > 1, 'only one fieldcolumn is extracted for climate FA'
-
-
 
 # =============================================================================
-# 2D fields
+# Test the FaFile class functionality
 # =============================================================================
 
+Fa=pyfa.FaFile(nwp_fa)
+# Test all methods
+df = Fa.get_fieldnames()
 
-# --------------- 2D fields --------------------
+assert df.shape[0] == 1375, 'The climate FA fields are not extracted correctly'
+assert len(df.columns) > 1, 'only one fieldcolumn is extracted for climate FA'
 
-print('Extracting 2D fields')
-data = pyfa.get_2d_field(fa_filepath=climate_fa,
-                         fieldname='SURFTEMPERATURE',
-                         target_crs='EPSG:4326')
-assert int(data.max(skipna=True)) == 313, 'Error in climate FA 2D import in to xarray'
+metadata = Fa.get_metadata()
+assert bool(metadata), 'metadata is empty'
+
+# describe
+Fa.describe()
+
+# sepecial
+print(Fa)
 
 
-nwpdata = pyfa.get_2d_field(fa_filepath=nwp_fa,
-                            fieldname='S004WIND.U.PHYS',
-                            target_crs='EPSG:4326')
-assert int(nwpdata.max(skipna=True)) == 15, 'Error in NWP FA 2D import in to xarray'
+
+Fa=pyfa.FaFile(climate_fa)
+# Test all methods
+df = Fa.get_fieldnames()
+
+assert df.shape[0] == 410, f'The climate FA fields are not extracted correctly'
+assert len(df.columns) > 1, 'only one fieldcolumn is extracted for climate FA'
+
+metadata = Fa.get_metadata()
+assert bool(metadata), 'metadata is empty'
+
+# describe
+Fa.describe()
+
+# sepecial
+print(Fa)
+
+
+
+#%%
+# =============================================================================
+# Test 2D import (NWP file)
+# =============================================================================
+print('2D field import test NWP')
+data = pyfa.FaDataset()
+data.set_fafile(nwp_fa)
+fieldname = 'CLSVENT.ZONAL'
+
+data.import_2d_field(fieldname=fieldname,
+                     reproj=False)
+
+
+assert data._get_physical_variables() == [fieldname], 'Something wrong with data variables'
+assert int(data.ds[fieldname].min()) == -5, 'Something wrong with data values'
+assert data.ds[fieldname].dims == ('y', 'x'), 'dimension order not correct'
+
+# =============================================================================
+# Test 3D import (NWP file)
+# =============================================================================
+print('3D field import test NWP')
+data = pyfa.FaDataset()
+data.set_fafile(nwp_fa)
+fieldname = 'WIND.U.PHYS'
+
+data.import_3d_field(fieldname=fieldname,
+                     reproj=False)
+assert data.ds[fieldname].dims == ('level', 'y', 'x'), 'dimension order not correct'
+assert data._get_physical_variables() == [fieldname], 'Something wrong with data variables'
+assert int(data.ds[fieldname].min()) == -11, 'Something wrong with data values'
 
 
 # =============================================================================
-# saving to netCDF
+# Test whitelist/blacklist multi import (NWP file)
 # =============================================================================
-print("Saving to nc test")
+print('General data import test NWP')
+data = pyfa.FaDataset()
+data.set_fafile(nwp_fa)
+whitelist = ['WIND.U.PHYS', 'CLSTEMPERATURE', 'fakename', "SURFACCPLUIE"]
 
+blacklist = ['WIND.U.PHYS', 'fakename2']
+
+data.import_fa(
+               whitelist=whitelist,
+               blacklist=blacklist,
+               reproj=False)
+
+
+assert data._get_physical_variables() == ['CLSTEMPERATURE', 'SURFACCPLUIE'], 'Something wrong with data variables'
+assert list(data.ds.dims) == ['y', 'x', 'level'], 'something wrong with dimensions'
+# =============================================================================
+# Test describe (NWP file)
+# =============================================================================
+print("Describe test NWP")
+data.describe()
+
+# =============================================================================
+# Test reproject (NWP file)
+# =============================================================================
+print('Reprojection test NWP')
+
+data.reproject(target_epsg='EPSG:4326')
+
+assert int(data.ds.coords['y'].max()) == 54 , 'something wrong with reprojecting'
+assert int(data.ds.coords['x'].max()) == 10, ' Something wrong with reprojecting'
+assert list(data.ds.dims) == ['y', 'x', 'level'], 'something wrong with dimensions after reproj'
+# =============================================================================
+# Test plot (NWP file)
+# =============================================================================
+print("Plot testing NWP")
+data.plot(variable='CLSTEMPERATURE',
+          level=None,
+          title=None,
+          grid=True,
+          land=True,
+          coastline=True,
+          contour=True,
+          contour_levels=10,
+          cmap='viridis')
+
+
+# =============================================================================
+# Test saveing/reading (NWP file)
+# =============================================================================
+print("Saving to nc test NWP")
 savefolder=os.path.join(rootfolder,'tests', 'data')
 savefile='dummy'
+data.save_nc(outputfolder=savefolder,
+             filename='dummy',
+             overwrite=True)
 
 
-pyfa.save_as_nc(xrdata=data,
-                outputfolder=savefolder,
-                filename=savefile)
+data2 = pyfa.FaDataset()
+data2.read_nc(file=os.path.join(savefolder, savefile+'.nc'))
 
-# test if file is created
-filepath = os.path.join(savefolder, savefile+'.nc')
-if not os.path.isfile(filepath):
-    sys.exit('Data not saved as nc.')
+assert int(data2.ds.coords['y'].max()) == 54 , '(read netCDF) something wrong with reprojecting '
+assert int(data2.ds.coords['x'].max()) == 10, '(read netCDF) Something wrong with reprojecting'
+assert data2._get_physical_variables() == ['CLSTEMPERATURE', 'SURFACCPLUIE'], '(read netCDF) Something wrong with data variables'
+assert list(data2.ds.dims) == ['y', 'x', 'level'], '(read netCDF) something wrong with dimensions'
 
-os.remove(filepath)
 
+
+#%%
+# =============================================================================
+# Test 2D import (climate file)
+# =============================================================================
+print('2D field import test climate')
+data = pyfa.FaDataset()
+data.set_fafile(climate_fa)
+fieldname = 'CLSVENT.ZONAL'
+
+data.import_2d_field(fieldname=fieldname,
+                     reproj=False)
+
+
+assert data._get_physical_variables() == [fieldname], 'Something wrong with data variables'
+assert int(data.ds[fieldname].min()) == -21, 'Something wrong with data values'
+assert data.ds[fieldname].dims == ('y', 'x'), 'dimension order not correct'
+
+# =============================================================================
+# Test 3D import (climate file)
+# =============================================================================
+print('3D field import test climate')
+data = pyfa.FaDataset()
+data.set_fafile(climate_fa)
+fieldname = 'WIND.U.PHYS'
+
+data.import_3d_field(fieldname=fieldname,
+                     reproj=False)
+assert data.ds[fieldname].dims == ('level', 'y', 'x'), 'dimension order not correct'
+assert data._get_physical_variables() == [fieldname], 'Something wrong with data variables'
+assert int(data.ds[fieldname].min()) == -35, 'Something wrong with data values'
 
 
 # =============================================================================
-# 3D fields
+# Test whitelist/blacklist multi import (climate file)
 # =============================================================================
-print("Extracting 3D fields")
+print('General data import test climate')
+data = pyfa.FaDataset()
+data.set_fafile(climate_fa)
+whitelist = ['WIND.U.PHYS', 'CLSTEMPERATURE', 'fakename', "SURFAEROS.LAND"]
+
+blacklist = ['WIND.U.PHYS', 'fakename2']
+
+data.import_fa(
+               whitelist=whitelist,
+               blacklist=blacklist,
+               reproj=False)
 
 
-d3_data = pyfa.get_3d_field(fa_filepath=climate_fa,
-                            fieldname='WIND.U.PHYS',
-                            target_crs='EPSG:4326')
-assert d3_data.dims == ('level', 'y', 'x'), 'Error in climate FA 3D import in to xarray'
+assert set(data._get_physical_variables()) == set(['CLSTEMPERATURE', "SURFAEROS.LAND"]), 'Something wrong with data variables'
+assert list(data.ds.dims) == ['y', 'x', 'level'], 'something wrong with dimensions'
+# =============================================================================
+# Test describe (climate file)
+# =============================================================================
+print("Describe test climate")
+data.describe()
 
-assert int(d3_data.sel(level=12).max(skipna=True)) == 44, 'Error in the climate 3D import'
+# =============================================================================
+# Test reproject (climate file)
+# =============================================================================
+print('Reprojection test climate')
+
+data.reproject(target_epsg='EPSG:4326')
+
+assert int(data.ds.coords['y'].max()) == 75 , 'something wrong with reprojecting'
+assert int(data.ds.coords['x'].max()) == 79, ' Something wrong with reprojecting'
+assert list(data.ds.dims) == ['y', 'x', 'level'], 'something wrong with dimensions after reproj'
+# =============================================================================
+# Test plot (climate file)
+# =============================================================================
+print("Plot testing climate")
+data.plot(variable='CLSTEMPERATURE',
+          level=None,
+          title=None,
+          grid=True,
+          land=True,
+          coastline=True,
+          contour=True,
+          contour_levels=10,
+          cmap='viridis')
 
 
-d3_data_bis = pyfa.get_3d_field(fa_filepath=climate_fa,
-                            fieldname='S013wind.U.Phys',
-                            target_crs='EPSG:4326')
+# =============================================================================
+# Test saveing/reading (climate file)
+# =============================================================================
+print("Saving to nc test climate")
+savefolder=os.path.join(rootfolder,'tests', 'data')
+savefile='dummy'
+data.save_nc(outputfolder=savefolder,
+             filename='dummy',
+             overwrite=True)
 
-assert d3_data_bis.dims == ('level', 'y', 'x'), 'Error in climate FA 3D import in to xarray (probably name formatiting)'
 
-assert int(d3_data_bis.sel(level=12).max(skipna=True)) == 44, 'Error in the climate 3D import (probably name formatiting)'
+data2 = pyfa.FaDataset()
+data2.read_nc(file=os.path.join(savefolder, savefile+'.nc'))
+
+assert int(data2.ds.coords['y'].max()) == 75 , '(read netCDF) something wrong with reprojecting '
+assert int(data2.ds.coords['x'].max()) == 79, '(read netCDF) Something wrong with reprojecting'
+assert set(data._get_physical_variables()) == set(['CLSTEMPERATURE', "SURFAEROS.LAND"]), 'Something wrong with data variables'
+assert list(data2.ds.dims) == ['y', 'x', 'level'], '(read netCDF) something wrong with dimensions'
+
 
 
 

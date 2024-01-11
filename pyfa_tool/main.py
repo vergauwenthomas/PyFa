@@ -25,7 +25,7 @@ PyFA: a tool for scientist working with ACCORD-FA files.
 --------------------------------------------------------
 
 The following functionality is available:
-    * -p, --plot (make as spatial plot of an FA file.)
+    * -p, --plot (make as spatial plot of an 2D field.)
     * -d, --describe (print out information of a FA file.)
     * -c, -- convert (convert a FA file to netCDF)""",
 
@@ -47,12 +47,12 @@ The following functionality is available:
 
     parser.add_argument("--print_fields", help="print available fields",
                         default=False, action="store_true")
-    parser.add_argument("-f", "--file", help="FA filename of path.", default='')
+    # parser.add_argument("-f", "--file", help="FA filename of path.", default='')
     parser.add_argument("--field", help="fieldname", default='SFX.T2M')
-    parser.add_argument("--proj", help="Reproject to this crs (ex: EPSG:4326)", default='EPSG:4326')
+    parser.add_argument("--proj", help="Reproject to this crs (ex: EPSG:4326)", default='') #default no reproj
 
-    parser.add_argument("--save", help="Save plot to file",
-                        default=False, action='store_true')
+    # parser.add_argument("--save", help="Save plot to file",
+    #                     default=False, action='store_true')
     parser.add_argument('kwargs', help='Extra arguments passed to the plot function.', nargs='*')
 
     args = parser.parse_args()
@@ -76,7 +76,7 @@ The following functionality is available:
     # Import required modules (so they are not loaded with --help)
     # =============================================================================
     import pyfa_tool as pyfa
-    from pyfa_tool.modules import plotting
+    # from pyfa_tool.modules import plotting
     import matplotlib.pyplot as plt
     from pathlib import Path
 
@@ -85,6 +85,31 @@ The following functionality is available:
     # =============================================================================
 
     assert args.file != "", 'No file specified in arguments.'
+
+    # =============================================================================
+    # Create kwargs
+    # =============================================================================
+
+    def is_number(s):
+        try:
+            float(s)
+            return True
+        except ValueError:
+            return False
+
+
+    kwarg_list_str = args.kwargs
+    kwargs = {}
+
+    for kwargstr in kwarg_list_str:
+        key=kwargstr.split('=')[0]
+        val=kwargstr.split('=')[1]
+        if is_number(val):
+            val = float(val)
+
+        kwargs[key] = val
+
+
 
     # =============================================================================
     # Forming the path
@@ -97,78 +122,52 @@ The following functionality is available:
 
     assert pyfa.modules.IO.check_file_exist(fa_file), f'{args.file} not found.'
 
-    # =============================================================================
-    # Convert FA to json
-    # =============================================================================
-
-    # 1  create tmp workdir
-    tmpdir = pyfa.modules.IO.create_tmpdir(location=os.getcwd()) # create a temporary (unique) directory
 
     # =============================================================================
     # Describe mode
     # =============================================================================
     if args.describe:
-        pyfa.describe_fa(fa_filepath=fa_file,
-                         tmpdir=tmpdir,
-                         rm_tmpdir=False)
+        FA = pyfa.FaFile(fa_file)
+        FA.describe()
 
     # =============================================================================
-    # Make xarray from json
+    # Plot (2d) mode
     # =============================================================================
-    if (args.plot | args.convert):
+
+    if args.plot:
+        ds = pyfa.FaDataset(fa_file) #Create dataset
 
         if args.proj == '':
             reproj_bool = False
         else:
             reproj_bool = True
 
-        data = pyfa.get_2d_field(fa_filepath=fa_file,
-                                 fieldname=str(args.field),
-                                 fieldnamesdf=None,
-                                 reproj=reproj_bool,
-                                 target_crs=args.proj,
-                                 tmpdir=tmpdir,
-                                 rm_tmpdir=True)
+        # import the 2d field
+        ds.import_2d_field(fieldname=str(args.field),
+                           rm_tmpdir=True,
+                           reproj=reproj_bool,
+                           target_epsg=args.proj,
+                           nodata=-999)
 
-        if args.plot:
-
-            # make plot
-            kwargs = pyfa.modules.IO.make_kwarg_dict(args.kwargs)
-            if args.save:
-                # make output filepath
-                origin = data.attrs['origin']
-                if origin[-4:] == '.sfx':
-                    filename = f'{origin[:-4]}_{args.field}.png'
-                elif origin[-3:] == '.FA':
-                    filename = f'{origin[:-3]}_{args.field}.png'
-                else:
-                    filename = f'{origin}_{args.field}.png'
-
-                filepath = os.path.join(os.getcwd(), filename)
-
-            fig, axs = pyfa.modules.plotting.make_fig()
-            plotting.make_plot(dxr=data,
-                               ax=axs,
-                               # TODO pass arguments as kwargs
-                               **kwargs
-                               )
-
-            if args.save:
-                plotting.save_plot(fig=fig, filepath=filepath, fmt='png')
-            plt.show()
-
-        else:
-            # Write to netCDF file
-            target_dir = str(Path(fa_file).parent)
-            target_file = str(Path(fa_file).stem) + '.nc'
-
-            pyfa.modules.to_xarray.save_as_nc(xrdata=data,
-                                              outputfolder=target_dir,
-                                              filename=target_file,
-                                              overwrite=False)
+        # plot the 2d field
+        ds.plot(variable=str(args.field),
+                **kwargs)
+        plt.show()
 
     # =============================================================================
-    # Delete json data
+    # Convert to netCDF mode
     # =============================================================================
+    if args.convert:
+        ds = pyfa.FaDataset(fa_file) #Create dataset
 
-    shutil.rmtree(tmpdir, ignore_errors=True)
+        # Write to netCDF file
+        target_dir = str(Path(fa_file).parent)
+        target_file = str(Path(fa_file).stem) + '.nc'
+
+        # import all field
+        ds.import_fa(**kwargs)
+
+        # save to nc
+        ds.save_nc(outputfolder=target_dir,
+                   filename=target_file,
+                   )

@@ -175,7 +175,7 @@ def _format_2d_field(fielddict):
         spctr = 'Unknown'.ljust(8)
 
     try:
-        nbit = str(fielddict['nbits']).ljust(4)
+        nbit = str(fielddict['nbits']).ljust(6)
     except KeyError:
         nbit = 'Unknown'.ljust(4)
 
@@ -205,7 +205,7 @@ def _format_3d_field(fielddict):
         spctr = 'Unknown'.ljust(10)
 
     try:
-        nbit = str(fielddict['nbits']).ljust(4)
+        nbit = str(fielddict['nbits']).ljust(6)
     except KeyError:
         nbit = 'Unknown'.ljust(4)
 

@@ -6,18 +6,29 @@ Created on Mon Jan 23 17:20:08 2023
 @author: thoverga
 """
 
-# from .lib_functions import setup_shell_command, FA_to_Xarray, get_fields
 
 
 __version__ = "0.0.2a"
 
 
+from pathlib import Path
+package_path=str(Path(__file__).parent.resolve())
 
-from .lib_functions import setup_shell_command
+
+from pyfa_tool.dataset import FaDataset, FaFile
 
 
-from .lib_functions import (get_fieldnames, field_exists, describe_fa,
-                            get_2d_field, get_3d_field,
-                           )
+def setup_shell_command():
+    """
+    When calling this function, the CLI PyFa is activated on your system.
 
-from .modules.to_xarray import save_as_nc
+    Returns
+    -------
+    None.
+
+    Note
+    -------
+    Only support for UNIX and writing right on the .bashrc.
+
+    """
+    from pyfa_tool.modules import setup_shell_commands

@@ -23,18 +23,37 @@ There are two ways to use the PyFa package:
  ```python
 import pyfa_tool as pyfa
 
-# Get available fields
-fielddf = pyfa.get_fields(fa_filepath=path_to_fa_file)
-print(fielddf) #Note that not all rows are printed (default pandas settings).
+fa_file = "/home/....." #FA file path
+# Inspection of the FA file without reading the data
+FA = pyfa.FaFile(fa_file) #Create an FaFile object
 
+print(FA.get_fieldnames()) #Get dataframe with fieldnames
+FA.describe() #print out detailed description
 
-# convert to an Xarray.DataArray
-dxr = pyfa.FA_to_Xarray(fa_filepath=path_to_fa_file,
-                  fieldname='SURFTEMPERATURE',
-                  target_crs='EPSG:4326')
-# info and plotting:
-print(dxr) #Don' panic if you see Nan's in the data, this is often so for the corners because of reprojecting.
-dxr.plot() #Matplotlib backend
+# Read in the data
+data = pyfa.FaDataset(fa_file)
+#import all available fields
+data.import_fa(whitelist=None,
+               blacklist=None,
+               rm_tmpdir=True,
+               reproj=False,
+               target_epsg='EPSG:4326')
+
+# Plot
+ax = data.plot(variable='CLSTEMPERATURE',
+               level=None,
+               title=None,
+               grid=False,
+               land=None,
+               coastline=None,
+               contour=False,
+               contour_levels=10)
+
+# Save
+data.save_nc(outputfolder='/home/....',
+             filename='netCDF_version_of_FA',
+             overwrite=False)
+
 ```
 
 
