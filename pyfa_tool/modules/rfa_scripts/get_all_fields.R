@@ -19,13 +19,6 @@ library(jsonlite)
 # ==============================================================================
 
 
-
-#filename = "/home/thoverga/Documents/github/PyFa-tool/development/fa_files/20200801/PFAR07csm07+0004"
-#outputdir="/home/thoverga/Documents/github/PyFa-tool/tests/data"
-
-
-
-
 # -----------------------IO -------------------------------------------
 
 args = commandArgs(trailingOnly=TRUE)
@@ -33,8 +26,6 @@ filename = args[1]
 outputdir = args[2]
 extra_attr_file = args[3]
 
-#TODO:
-#lees hier de json file met whitelist en blacklists
 
 # ---------------------------------------------
 # ------------ read special attributes -------------

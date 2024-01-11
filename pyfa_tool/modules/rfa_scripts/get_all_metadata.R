@@ -10,12 +10,10 @@ library(jsonlite)
 # ==============================================================================
 # This script will:
 #
-# 1. Open an FA file with Rfa
-# 2. find all 2D and 3D fields
-# 3. find general metadata + coordinates from the first field and add it to a list
-# 3. Read all 2D fields and add it to the list
-# 4. Read all 3D fields + construct the coordinates and add it to the list
-# 5. All data is writed to a json file ('FA.json') in the output folder
+# 1. Open an FA file with Rfa and get all the fieldnames
+# 2. Write all fieldnames (tabular data) to a json file ('fields.json') in the output folder
+# 3. Find general metadata + coordinates from the first field (as dummy)
+# 4. Write the metadata and coordinates to a json file ('metadata.json') in the output folder
 # ==============================================================================
 
 
