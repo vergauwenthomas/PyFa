@@ -8,6 +8,7 @@ Created on Mon Jan  8 13:50:41 2024
 
 import os
 import sys
+import copy
 from collections.abc import Iterable
 import subprocess
 import numpy as np
@@ -617,9 +618,17 @@ class FaDataset():
 
         """
         assert not (self.ds is None), 'Empty instance of FaDataset.'
+
         ds = geospatial_func.reproject(dataset=self.ds,
                                        target_epsg=target_epsg,
                                        nodata=self.nodata)
+
+        if 'level' in self.ds.coords:
+            ds = ds.assign_coords({"level": self.ds.coords['level'].data})
+
+
+
+
         self.ds = ds
 
 

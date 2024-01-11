@@ -47,10 +47,9 @@ def make_platcarree_fig():
 # =============================================================================
 
 
-def make_plot(dxr, ax,title=None, grid=False, land=True, coastline=True, contour=False, legend=True, levels=10, **kwargs):
+def make_plot(dxr, ax,title=None, grid=False, land=True, coastline=True, contour=False, levels=10, **kwargs):
     if contour:
-        dxr.plot.contourf(ax=ax, add_colorbar=legend,
-                               levels=levels,  **kwargs)
+        dxr.plot.contourf(ax=ax, levels=levels,  **kwargs)
 
     else:
         dxr.plot(ax=ax, **kwargs)
