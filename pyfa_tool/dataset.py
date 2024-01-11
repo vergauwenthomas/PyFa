@@ -239,9 +239,9 @@ class FaDataset():
         self.nodata = nodata
 
 
-    # =============================================================================
+    # =========================================================================
     # Specials
-    # =============================================================================
+    # =========================================================================
     def __repr__(self):
         return str(self.ds)
 
@@ -249,9 +249,9 @@ class FaDataset():
         return str(self.ds)
 
 
-    # =============================================================================
+    # =========================================================================
     # Setters / Getters
-    # =============================================================================
+    # =========================================================================
     def set_fafile(self, fafile):
         """
         Update the path to the FA-file.
@@ -283,12 +283,50 @@ class FaDataset():
         return self._get_physical_variables()
 
 
-    # =============================================================================
+    # =========================================================================
     # Importing data
-    # =============================================================================
+    # =========================================================================
     def import_fa(self, whitelist=None, blacklist=None,
                   rm_tmpdir=True, reproj=False, target_epsg='EPSG:4326',
-                  nodata=-999):
+                  ):
+        """
+        Import a FA file and make a xarray.Dataset of it.
+
+        The creation of this dataset is done by:
+
+            * Reading all fieldnames of the FA file.
+            * Constructing a whitelist (fieldnames to be read by RFa)
+            * Construct a blacklist (fieldnames to be skipped by RFa)
+            * Use RFa to read all desired fields, and write them to json
+            * Read the jsons and feed the data to a xarray.Dataset.
+            * Add metadata to the xarray.Dataset
+            * Reproject (if needed) the xarray.Dataset
+
+
+        Parameters
+        ----------
+        whitelist : list or (fieldname)str, optional
+            A list of (or a single) fieldname to read from a FA file. If None,
+            all fieldnames are read. The default is None.
+        blacklist : list or (fieldname)str, optional
+            A list of (or a single) fieldname to skip from the FA file. If None,
+            the blacklist is empty. The blacklist surpasses the whitelist. The default is None.
+        rm_tmpdir : bool, optional
+            If True, the directory where the json files are stored will be
+            removed. The default is True.
+        reproj : bool, optional
+            If True, the data will be reproject to the CRS specified by the
+            target_epsg. The default is False.
+        target_epsg : str, optional
+            EPSG code to reproject the data to. The default is 'EPSG:4326'.
+
+
+        Returns
+        -------
+        None.
+
+        """
+
         assert not self.fafile is None, 'First set a FAfile path, using the set_fafile() method.'
 
         # Get all available fields
@@ -354,14 +392,14 @@ class FaDataset():
         # create at tmpdir if not provided
         tmpdir = IO.create_tmpdir(location=os.getcwd())
 
-        # TODO: write subset_fields to a json file in the tmpdir because
-        # there is no clean way i found to parse multiple lists as arguments
-        #for an R script.
+
+        # There is no clean way i found to parse multiple lists as arguments
+        #for an R script. So write them to json, and read them in the Rscript.
+
         Rfa_attr_json=os.path.join(tmpdir, 'Rfa_extra_attrs.json')
         IO.write_json(datadict=subset_fields,
                       jsonpath=Rfa_attr_json,
                       force=True)
-
 
         # Run Rscript to generete json files with data and meta info
         r_script = os.path.join(package_path, 'modules',
@@ -381,7 +419,7 @@ class FaDataset():
         ds = reading_fa.json_to_full_dataset(jsonfile,
                                             reproj=reproj,
                                             target_epsg=target_epsg,
-                                            nodata=nodata)
+                                            nodata=self.nodata)
 
         if rm_tmpdir:
             IO.remove_tempdir(tmpdir)
@@ -391,8 +429,30 @@ class FaDataset():
 
 
     def import_2d_field(self, fieldname,
-                        rm_tmpdir=True, reproj=False, target_epsg='EPSG:4326',
-                        nodata=-999):
+                        rm_tmpdir=True, reproj=False, target_epsg='EPSG:4326'):
+        """
+        Import a 2D field of a FA file into an xarray.Dataset.
+
+        This method is a wrapper on the more general .import_fa() method.
+
+        Parameters
+        ----------
+        fieldname : str
+            The fieldname of a 2D field in the FA file.
+        rm_tmpdir : bool, optional
+            If True, the directory where the json files are stored will be
+            removed. The default is True.
+        reproj : bool, optional
+            If True, the data will be reproject to the CRS specified by the
+            target_epsg. The default is False.
+        target_epsg : str, optional
+            EPSG code to reproject the data to. The default is 'EPSG:4326'.
+
+        Returns
+        -------
+        None.
+
+        """
 
 
         assert not self.fafile is None, 'First set a FAfile path, using the set_fafile() method.'
@@ -407,14 +467,36 @@ class FaDataset():
         self.import_fa(whitelist=fieldname,
                        blacklist=None,
                        rm_tmpdir=rm_tmpdir,
-                       reproj=reproj,
-                       target_epsg=target_epsg,
-                       nodata=nodata)
+                       reproj=reproj)
 
 
     def import_3d_field(self, fieldname,
-                        rm_tmpdir=True, reproj=False, target_epsg='EPSG:4326',
-                        nodata=-999):
+                        rm_tmpdir=True, reproj=False, target_epsg='EPSG:4326'):
+        """
+        Import a 3D field of a FA file into an xarray.Dataset.
+
+        This method is a wrapper on the more general .import_fa() method.
+
+        Parameters
+        ----------
+        fieldname : str
+            The basisfieldname of a 3D field. 'TEMPERATURE' is an example of a
+            basisfieldname IF 2D fieldnames as S001TEMPERATURE and
+            S002TEMPERATURE and ... are found.
+        rm_tmpdir : bool, optional
+            If True, the directory where the json files are stored will be
+            removed. The default is True.
+        reproj : bool, optional
+            If True, the data will be reproject to the CRS specified by the
+            target_epsg. The default is False.
+        target_epsg : str, optional
+            EPSG code to reproject the data to. The default is 'EPSG:4326'.
+
+        Returns
+        -------
+        None.
+
+        """
 
         assert not self.fafile is None, 'First set a FAfile path, using the set_fafile() method.'
 
@@ -429,8 +511,7 @@ class FaDataset():
                        blacklist=None,
                        rm_tmpdir=rm_tmpdir,
                        reproj=reproj,
-                       target_epsg=target_epsg,
-                       nodata=nodata)
+                       target_epsg=target_epsg)
 
 
 
@@ -438,6 +519,28 @@ class FaDataset():
 
 
     def save_nc(self, outputfolder, filename, overwrite=False, **kwargs):
+        """
+        Save the xarray.Dataset as a netCDF file.
+
+
+        Parameters
+        ----------
+        outputfolder : str
+            Path to the folder to write the netCDF file to.
+        filename : str
+            Name of the netCDF file.
+        overwrite : bool, optional
+            If the path of the target netCDF file exist, an error will be
+            thrown unles overwrite is True. Then the file will be overwritten.
+            The default is False.
+        **kwargs : kwargs
+            Kwargs will be passed to the xarray.to_netcdf() method.
+
+        Returns
+        -------
+        None.
+
+        """
 
         assert not (self.ds is None), 'Empty instance of FaDataset.'
 
@@ -458,6 +561,23 @@ class FaDataset():
 
 
     def read_nc(self, file, **kwargs):
+        """
+        Read a netCDF file and import it to an xarray.Dataset()
+
+        Parameters
+        ----------
+        file : str
+            Path tho the netCDF file.
+        **kwargs : kwargs
+            Kwargs will be passed to the xarray.open_dataset() method.
+
+        Returns
+        -------
+        None.
+
+        """
+
+
         if not (self.ds is None):
             sys.exit('The dataset is not empty! Use read_nc() only on an empty Dataset.')
         ds = IO.read_netCDF(file, **kwargs)
@@ -480,6 +600,22 @@ class FaDataset():
     # =============================================================================
 
     def reproject(self, target_epsg='EPSG:4326'):
+        """
+        Reproject the dataset to a target CRS.
+
+        (This can only be applied when sufficient current projection
+         information is available.)
+
+        Parameters
+        ----------
+        target_epsg : str, optional
+            Target epsg code to project to. The default is 'EPSG:4326'.
+
+        Returns
+        -------
+        None.
+
+        """
         assert not (self.ds is None), 'Empty instance of FaDataset.'
         ds = geospatial_func.reproject(dataset=self.ds,
                                        target_epsg=target_epsg,
@@ -491,8 +627,47 @@ class FaDataset():
     # Analysis of data
     # =============================================================================
     def plot(self, variable, level=None, title=None, grid=False, land=None,
-             coastline=None, contour=False, legend=True,
-             levels=10, **kwargs):
+             coastline=None, contour=False,
+             contour_levels=10, **kwargs):
+        """
+        Make a 2D spatial plot of a Dataset.
+
+
+        Parameters
+        ----------
+        variable : str
+            A 2D fieldname or a 3D basisfieldname (level is required) to plot.
+        level : int, optional
+            The level to plot if a 3D basisfieldname is provided. The default
+            is None.
+        title : str, optional
+            The title of the plot. If None, a default title is constructed. The
+            default is None.
+        grid : bool, optional
+            Add gridlines to plot. The default is False.
+        land : bool, optional
+            If True, and if the dataset is in a latlon projection (EPSG:4326),
+            then land boarders are drawn. If None, it will be set to True if
+            the projection is latlon, else False. The default is None.
+        coastline : bool, optional
+            If True, and if the dataset is in a latlon projection (EPSG:4326),
+            then coastlines are drawn. If None, it will be set to True if
+            the projection is latlon, else False. The default is None.
+        contour : bool, optional
+            If True, the contourf() method is used as a plotting backend, else
+            the default xarray.Dataset.plot(). The default is False.
+        contour_levels : int, optional
+            Number of contour levels to use, if contour=True. The default is 10.
+        **kwargs : kwargs
+            Kwargs will be passed to the xarray.plot() method.
+
+        Returns
+        -------
+        ax : matplotlib.pyplot.axes
+            The geospatial axes of the plot.
+
+        """
+
 
 
         assert not (self.ds is None), 'Empty instance of FaDataset.'
@@ -540,8 +715,7 @@ class FaDataset():
                         land=land,
                         coastline=coastline,
                         contour=contour,
-                        legend=legend,
-                        levels=levels,
+                        levels=contour_levels,
                         **kwargs)
 
         return ax
@@ -557,6 +731,7 @@ class FaDataset():
     # =============================================================================
 
     def field_exist(self, fieldname):
+        """ Check if a variable exist in the xarray.Dataset (2D and 3D)"""
         if self.ds is None:
             sys.exit('Empty FaDataset object.')
         phys_variables = self._get_physical_variables()
@@ -567,6 +742,7 @@ class FaDataset():
             return False
 
     def _is_2d_field(self, fieldname):
+        """ Check if a fieldname is an available 2D field."""
         if not self.field_exist(fieldname):
             return False #field does not exist at all
         if len(self.ds[fieldname].data.shape) == 2:
@@ -575,6 +751,7 @@ class FaDataset():
             return False
 
     def _is_3d_field(self, fieldname):
+        """ Check if a fieldname is an available 3D field."""
         if not self.field_exist(fieldname):
             return False #field does not exist at all
         if len(self.ds[fieldname].data.shape) == 3:
@@ -583,12 +760,13 @@ class FaDataset():
             return False
 
     def _in_latlon(self):
-       if self.ds is None:
-           return False #data does not exist at all
-       if str(self.ds.rio.crs) == 'EPSG:4326':
-           return True
-       else:
-           return False
+        """ Check if a dataset is in latitude-longitude spatial coordinates."""
+        if self.ds is None:
+            return False #data does not exist at all
+        if str(self.ds.rio.crs) == 'EPSG:4326':
+            return True
+        else:
+            return False
 
     def _get_physical_variables(self):
         blacklist=['spatial_ref']
