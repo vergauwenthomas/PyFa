@@ -16,6 +16,7 @@ package_path=str(Path(__file__).parent.resolve())
 
 
 from pyfa_tool.dataset import FaDataset, FaFile
+from pyfa_tool.collection import FaCollection
 
 
 def setup_shell_command():

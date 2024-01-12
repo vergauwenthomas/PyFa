@@ -12,6 +12,7 @@ import copy
 from collections.abc import Iterable
 import subprocess
 import numpy as np
+import pandas as pd
 import xarray as xr
 import rioxarray
 from datetime import datetime, timedelta
@@ -284,6 +285,81 @@ class FaDataset():
         return self._get_physical_variables()
 
 
+    def get_validate(self):
+        """
+        Get the validate of the FA data.
+
+        Returns
+        -------
+        datetime.datetime or aray of datetimes
+            The validate of the FA data.
+
+        """
+
+        valid_coordinates = self.ds.coords['validate'].data
+        if len(valid_coordinates) == 1:
+            #Typecast to pandas datetime for incorporation in MetObs-toolkit
+            return pd.Timestamp(valid_coordinates[0])
+        else:
+            return [pd.Timestamp(t) for t in valid_coordinates]
+
+    def get_basedate(self):
+        """
+        Get the baseate of the FA data.
+
+        Returns
+        -------
+        pandas.Timestamp or list of them
+            The validate of the FA data.
+
+        """
+        base_coordinates = self.ds.coords['basedate'].data
+        if len(base_coordinates) == 1:
+            return pd.Timestamp(base_coordinates[0])
+        else:
+            return [pd.Timestamp(t) for t in base_coordinates]
+
+    def get_delta_t(self):
+        """
+        Get the delta-t of the model.
+
+        Returns
+        -------
+        pandas.Timedelta
+            The model timeresolution.
+
+        """
+        return pd.Timedelta(int(self.ds.attrs['delta_t']), unit='seconds')
+
+    def get_leadtime(self):
+        """
+        Get the model leadtime at the current data.
+
+        Returns
+        -------
+        pandas.Timedelta
+            The leadtime of the model.
+
+        """
+        return self.get_validate() - self.get_basedate()
+
+
+    def get_timestep(self):
+        """
+        Get the timestep of the current data.
+
+
+        Returns
+        -------
+        int
+            The timestep of the current data.
+
+        """
+        return int(self.get_leadtime() / self.get_delta_t())
+
+
+
+
     # =========================================================================
     # Importing data
     # =========================================================================
@@ -427,6 +503,7 @@ class FaDataset():
 
         # Update attribute
         self.ds = ds
+        self._clean()
 
 
     def import_2d_field(self, fieldname,
@@ -593,6 +670,7 @@ class FaDataset():
         #TODO: Setup the rio projection!!
 
         self.ds = ds
+        self.clean()
         print('netCDF loaded.')
 
 
@@ -626,10 +704,8 @@ class FaDataset():
         if 'level' in self.ds.coords:
             ds = ds.assign_coords({"level": self.ds.coords['level'].data})
 
-
-
-
         self.ds = ds
+        self.clean()
 
 
     # =============================================================================
@@ -739,6 +815,63 @@ class FaDataset():
     # Helpers
     # =============================================================================
 
+    def _set_time_dimensions(self):
+        """
+        Set up of the time dimension: validate and basedate.
+
+        The timedimension are (in FA files) stored as attributes. In the context
+        of creating datasets of multiple FA files, we must convert these time-
+        attributes to dimensions and coordinates.
+
+        In addition, the leadtime and timestep attributes are removed and the
+        delta_t (model-output-invariant) is used instead.
+
+        (Conversion to leadtime and timestep is availabel with the corresponding
+         get methods.)
+
+
+        Returns
+        -------
+        None.
+
+        """
+
+        # set basedate and validdate as coordinates (required for merging)
+        if (('validate' in self.ds.attrs.keys()) & ('validate' not in self.ds.coords)):
+            self.ds = self.ds.assign_coords({"validate": [self.ds.attrs['validate']]})
+        if (('basedate' in self.ds.attrs.keys()) & ('basedate' not in self.ds.coords)):
+            self.ds = self.ds.assign_coords({"basedate": [self.ds.attrs['basedate']]})
+
+        # Create time-attribute-invarials
+        # (When merging multiple files on a time coordinate, the attributes
+        #  must be the same ---> validdate, leadtime, timestep cannot be stored
+        # as attributes! (basedate aswell for nwp applications).
+
+        # SO: validdate and basedata are coordinates, so we need only the
+        # Delta-t as invariant so merging is possible
+        if 'delta_t' not in self.ds.attrs.keys():
+            delta_t =self.ds.attrs['leadtime']/self.ds.attrs['timestep']
+            self.ds.attrs['delta_t'] = int(delta_t.seconds)
+
+        #Drop variant time attributes
+        to_drop = ['validate', 'basedate', 'leadtime', 'timestep']
+        for dropkey in to_drop:
+           self._drop_attr(dropkey)
+
+
+        # Fix dimension order
+        self.ds = self.ds.transpose('y', 'x', 'level', 'validate', 'basedate')
+
+
+
+    def _clean(self):
+        if 'spatial_ref' in self.ds.coords:
+            self.ds = self.ds.drop_vars('spatial_ref') #drop the "spatial_ref" dimension
+
+        self._set_time_dimensions()
+
+
+
     def field_exist(self, fieldname):
         """ Check if a variable exist in the xarray.Dataset (2D and 3D)"""
         if self.ds is None:
@@ -785,6 +918,12 @@ class FaDataset():
         return var_list
 
 
+    def _drop_attr(self, key):
+        """Drop a key in the attrs, if it exists."""
+        try:
+            del self.ds.attrs[key]
+        except KeyError:
+            pass
 
 
 
