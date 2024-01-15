@@ -486,7 +486,6 @@ class FaDataset():
                                             reproj=reproj,
                                             target_epsg=target_epsg,
                                             nodata=self.nodata)
-
         if rm_tmpdir:
             IO.remove_tempdir(tmpdir)
 
@@ -611,13 +610,14 @@ class FaDataset():
 
         assert not (self.ds is None), 'Empty instance of FaDataset.'
 
+        self._clean()
         saveds = self.ds
         #serialise special attributes
-        saveds.attrs['basedate'] = datetime.strftime(saveds.attrs['basedate'],
-                                                     '%Y-%m-%d %H:%M:%S' )
-        saveds.attrs['validate'] = datetime.strftime(saveds.attrs['validate'],
-                                                     '%Y-%m-%d %H:%M:%S' )
-        saveds.attrs['leadtime'] = saveds.attrs['leadtime'].seconds
+        # saveds.attrs['basedate'] = datetime.strftime(saveds.attrs['basedate'],
+        #                                              '%Y-%m-%d %H:%M:%S' )
+        # saveds.attrs['validate'] = datetime.strftime(saveds.attrs['validate'],
+        #                                              '%Y-%m-%d %H:%M:%S' )
+        # saveds.attrs['leadtime'] = saveds.attrs['leadtime'].seconds
 
 
         IO.save_as_nc(xrdata=saveds,
@@ -650,16 +650,16 @@ class FaDataset():
         ds = IO.read_netCDF(file, **kwargs)
 
         #un-serialise special attributes
-        ds.attrs['basedate'] = datetime.strptime(ds.attrs['basedate'],
-                                                 '%Y-%m-%d %H:%M:%S' )
-        ds.attrs['validate'] = datetime.strptime(ds.attrs['validate'],
-                                                     '%Y-%m-%d %H:%M:%S' )
-        ds.attrs['leadtime'] = timedelta(seconds=int(ds.attrs['leadtime']))
+        # ds.attrs['basedate'] = datetime.strptime(ds.attrs['basedate'],
+        #                                          '%Y-%m-%d %H:%M:%S' )
+        # ds.attrs['validate'] = datetime.strptime(ds.attrs['validate'],
+        #                                              '%Y-%m-%d %H:%M:%S' )
+        # ds.attrs['leadtime'] = timedelta(seconds=int(ds.attrs['leadtime']))
 
         #TODO: Setup the rio projection!!
 
         self.ds = ds
-        self.clean()
+        self._clean()
         print('netCDF loaded.')
 
 
@@ -693,8 +693,15 @@ class FaDataset():
         if 'level' in self.ds.coords:
             ds = ds.assign_coords({"level": self.ds.coords['level'].data})
 
+        #Time dimensions are not projected, and are removed by rio, so
+        # add these dimesions back to te reprojected dataset
+        if 'validate' not in ds.dims:
+            ds = ds.assign_coords({'validate': self.ds.coords['validate'].data})
+        if 'basedate' not in ds.dims:
+            ds = ds.assign_coords({'basedate': self.ds.coords['basedate'].data})
+
         self.ds = ds
-        self.clean()
+        self._clean()
 
 
     # =============================================================================
@@ -779,7 +786,7 @@ class FaDataset():
 
         # create title
         if title is None:
-            title =  title=f'{variable} at {self.ds.attrs["validate"]} (UTC, LT={self.ds.attrs["leadtime"]}h)'
+            title =  title=f'{variable} at {self.get_validate()} (UTC, LT={self.get_leadtime()})'
 
 
         ax = plotting.make_plot(dxr = xarr,
@@ -849,8 +856,9 @@ class FaDataset():
 
 
     def _clean(self):
-        if 'spatial_ref' in self.ds.coords:
-            self.ds = self.ds.drop_vars('spatial_ref') #drop the "spatial_ref" dimension
+        #spatial_ref contians the CRS info, so do not remove it!
+        # if 'spatial_ref' in self.ds.coords:
+            # self.ds = self.ds.drop_vars('spatial_ref') #drop the "spatial_ref" dimension
 
         self._set_time_dimensions()
 

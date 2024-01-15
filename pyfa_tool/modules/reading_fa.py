@@ -137,5 +137,4 @@ def json_to_full_dataset(jsonfile, reproj=True, target_epsg='EPSG:4326', nodata=
         ds = geospatial_func.reproject(dataset=ds,
                                        target_epsg=target_epsg,
                                        nodata=nodata)
-
     return ds

@@ -51,7 +51,7 @@ class FaCollection():
             fadatasets.append(Dataset)
 
         #add them as attribute
-        self.set_fadatasets()
+        self.set_fadatasets(FaDatasets=fadatasets)
 
 
 
