@@ -14,6 +14,7 @@ import random
 import pandas as pd
 import subprocess
 import shutil
+import fnmatch
 import xarray as xr
 
 
@@ -81,6 +82,38 @@ def remove_tempdir(tmpdirpath):
 
     """
     shutil.rmtree(tmpdirpath, ignore_errors=True)
+
+
+def get_paths_using_regex(searchdir, filename_regex='*'):
+    """
+    Get all files, from inside searchdir, that match a regex expression (unix wildcard accepted).
+
+    Parameters
+    ----------
+    searchdir : str
+        The path of the directory to scan all files of.
+    filename_regex : str, optional
+        Regex expression for matching filenames. The default is '*'.
+
+    Returns
+    -------
+    matching_paths : list
+        A list of the matching file paths.
+
+    """
+    if not os.path.isdir(searchdir):
+        sys.exit(f'{searchdir} is not a directory.')
+
+    #Get all filenames
+    files = os.listdir(searchdir)
+
+    # Get matching filenames
+    matching_files = fnmatch.filter(files, str(filename_regex))
+
+    # construct paths
+    matching_paths = [os.path.join(searchdir, f) for f in matching_files]
+
+    return matching_paths
 
 
 

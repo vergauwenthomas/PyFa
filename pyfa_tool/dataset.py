@@ -319,9 +319,9 @@ class FaDataset():
         else:
             return [pd.Timestamp(t) for t in base_coordinates]
 
-    def get_delta_t(self):
+    def get_timestep(self):
         """
-        Get the delta-t of the model.
+        Get the delta-t (timestep) of the model.
 
         Returns
         -------
@@ -329,7 +329,7 @@ class FaDataset():
             The model timeresolution.
 
         """
-        return pd.Timedelta(int(self.ds.attrs['delta_t']), unit='seconds')
+        return pd.Timedelta(int(self.ds.attrs['timestep']), unit='seconds')
 
     def get_leadtime(self):
         """
@@ -344,18 +344,7 @@ class FaDataset():
         return self.get_validate() - self.get_basedate()
 
 
-    def get_timestep(self):
-        """
-        Get the timestep of the current data.
 
-
-        Returns
-        -------
-        int
-            The timestep of the current data.
-
-        """
-        return int(self.get_leadtime() / self.get_delta_t())
 
 
 
@@ -823,10 +812,10 @@ class FaDataset():
         of creating datasets of multiple FA files, we must convert these time-
         attributes to dimensions and coordinates.
 
-        In addition, the leadtime and timestep attributes are removed and the
-        delta_t (model-output-invariant) is used instead.
+        In addition, the leadtime attribute is removed since it is time variant
+        and blocking a merge on time.
 
-        (Conversion to leadtime and timestep is availabel with the corresponding
+        (Conversion to leadtime is availabel with the corresponding
          get methods.)
 
 
@@ -848,13 +837,8 @@ class FaDataset():
         # as attributes! (basedate aswell for nwp applications).
 
         # SO: validdate and basedata are coordinates, so we need only the
-        # Delta-t as invariant so merging is possible
-        if 'delta_t' not in self.ds.attrs.keys():
-            delta_t =self.ds.attrs['leadtime']/self.ds.attrs['timestep']
-            self.ds.attrs['delta_t'] = int(delta_t.seconds)
-
-        #Drop variant time attributes
-        to_drop = ['validate', 'basedate', 'leadtime', 'timestep']
+        # timestep as invariant so merging is possible, Drop variant time attributes
+        to_drop = ['validate', 'basedate', 'leadtime']
         for dropkey in to_drop:
            self._drop_attr(dropkey)
 

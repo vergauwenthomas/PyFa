@@ -10,37 +10,75 @@ import os
 import sys
 import xarray as xr
 import numpy as np
-
-from pyfa_tool.dataset import FaFile, FaDataset
-
-
-
-# def what_is_wrong(ds1, ds2):
-#     for key in ds1.attrs.keys():
-#         if key not in ds2.attrs.keys():
-#             print(f'{key} not in ds2')
-
-#         val1 = ds1.attrs[key]
-#         val2 = ds1.attrs[key]
-
-#         if val1 != val2:
-#             print("values not equal: ")
-#             print(f'val1: {val1}')
-#             print(f'val2: {val2}')
-
-
-
+from pyfa_tool.dataset import FaDataset as FaDatasetClass
+import pyfa_tool.modules.IO as IO
 
 class FaCollection():
-    def __init__(self):
+    def __init__(self, FaDatasets=[]):
         self.ds = None
+        self.FaDatasets = FaDatasets
+
+     # =========================================================================
+     #     Special functions ------------
+     # =========================================================================
 
 
-    def combine_by_validate(self, FaDatasets=[]):
+    # =============================================================================
+    # Getters/setters
+    # =============================================================================
+    def set_fadatasets(self, FaDatasets=[]):
         if len(FaDatasets) == 0:
             sys.exit('No FaDatasets are provided.')
         if len(FaDatasets) < 2:
             sys.exit(f'Only one FaDatasets is provided: {FaDatasets[0]}')
+
+        # type testing
+        for dataset in FaDatasets:
+            if not isinstance(dataset, FaDatasetClass):
+                sys.exit(f'{dataset} is not an instance of FaDataset.')
+        self.FaDatasets = FaDatasets
+
+
+    def set_fadatasets_by_file_regex(self, searchdir, filename_regex='*', **kwargs):
+        # Get paths to the FA files
+        filepaths = IO.get_paths_using_regex(searchdir=searchdir,
+                                             filename_regex=filename_regex)
+        # Read the FaFiles
+        fadatasets =  []
+        for file in filepaths:
+            Dataset = FaDatasetClass(fafile=file)
+            Dataset.import_fa(**kwargs)
+            fadatasets.append(Dataset)
+
+        #add them as attribute
+        self.set_fadatasets()
+
+
+
+
+    # =========================================================================
+    # Specials
+    # =========================================================================
+    def __repr__(self):
+        return str(self.ds)
+
+    def __str__(self):
+        return str(self.ds)
+
+
+
+    def combine_by_validate(self):
+        FaDatasets = self.FaDatasets
+
+        if len(FaDatasets) == 0:
+            sys.exit('No FaDatasets are provided.')
+        if len(FaDatasets) < 2:
+            sys.exit(f'Only one FaDatasets is provided: {FaDatasets[0]}')
+
+        # Sort Datasets by increasing validate
+        FaDatasets.sort(key=lambda x: x.get_validate(), reverse=False)
+        # TODO: For NWP there is need for an additional sorting on basetime!
+
 
 
         # Prepare the attributes for merging
@@ -58,8 +96,6 @@ class FaCollection():
             dataset._drop_attr('A_list')
 
 
-
-
         # get all attributes that are specific to one dataset
         specific_comb_attributes = {'origins' : [],
                                     'filepaths' : [],
@@ -73,8 +109,9 @@ class FaCollection():
             dataset._drop_attr('filepath')
 
 
+
         ds = xr.concat(objs = [x.ds for x in FaDatasets],
-                       dim='validate',
+                       dim='validate', #For NWP, 'basetime' must be added as dimension!
                        data_vars='all',
                        coords='all',
                        compat='equals',
@@ -91,6 +128,7 @@ class FaCollection():
 
 
 
+# def _check_if_datasets_are_unique(FaDatasets):
 
 
 def _check_lists_are_equal(list_a, list_b):
