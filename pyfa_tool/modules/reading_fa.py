@@ -16,15 +16,10 @@ from datetime import datetime, timedelta
 
 import pyfa_tool.modules.IO as IO
 import pyfa_tool.modules.geospatial_functions as geospatial_func
+from pyfa_tool.modules.describe_module import _str_to_dt
 # =============================================================================
 # Formatters
 # =============================================================================
-
-def _fmt_basedate(string, fmt="%Y-%m-%d"):
-    return datetime.strptime(string, fmt)
-
-def _fmt_validate(string, fmt="%Y-%m-%d %H:%M:%S"):
-    return datetime.strptime(string, fmt)
 
 def _create_proj4_str(metadict):
     proj4str = f'+proj={metadict["projection"][0]} +lat_1={metadict["lat_1"][0]} +lat_2={metadict["lat_2"][0]} ' + \
@@ -69,8 +64,8 @@ def json_to_full_dataset(jsonfile, reproj=True, target_epsg='EPSG:4326', nodata=
     data = IO.read_json(jsonfile)
 
     metadict = {
-        'basedate': _fmt_basedate(data['pyfa_metadata']['basedate'][0]),
-        'validate': _fmt_validate(data['pyfa_metadata']['validate'][0]),
+        'basedate': _str_to_dt(data['pyfa_metadata']['basedate'][0]),
+        'validate': _str_to_dt(data['pyfa_metadata']['validate'][0]),
         'leadtime': timedelta(hours = float(data['pyfa_metadata']['leadtime'][0])),
 
         'timestep': int(data['pyfa_metadata']['timestep'][0]),
