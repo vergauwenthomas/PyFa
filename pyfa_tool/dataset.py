@@ -482,16 +482,18 @@ class FaDataset():
         jsonfile = os.path.join(tmpdir, "FA.json")
 
         # Convert to a xarray dataset
-        ds = reading_fa.json_to_full_dataset(jsonfile,
-                                            reproj=reproj,
-                                            target_epsg=target_epsg,
-                                            nodata=self.nodata)
+        ds = reading_fa.json_to_full_dataset(jsonfile)
+
+
         if rm_tmpdir:
             IO.remove_tempdir(tmpdir)
 
         # Update attribute
         self.ds = ds
         self._clean()
+
+        if reproj:
+            self.reproject(target_epsg=target_epsg)
 
 
     def import_2d_field(self, fieldname,
@@ -612,13 +614,6 @@ class FaDataset():
 
         self._clean()
         saveds = self.ds
-        #serialise special attributes
-        # saveds.attrs['basedate'] = datetime.strftime(saveds.attrs['basedate'],
-        #                                              '%Y-%m-%d %H:%M:%S' )
-        # saveds.attrs['validate'] = datetime.strftime(saveds.attrs['validate'],
-        #                                              '%Y-%m-%d %H:%M:%S' )
-        # saveds.attrs['leadtime'] = saveds.attrs['leadtime'].seconds
-
 
         IO.save_as_nc(xrdata=saveds,
                    outputfolder=outputfolder,
@@ -648,13 +643,6 @@ class FaDataset():
         if not (self.ds is None):
             sys.exit('The dataset is not empty! Use read_nc() only on an empty Dataset.')
         ds = IO.read_netCDF(file, **kwargs)
-
-        #un-serialise special attributes
-        # ds.attrs['basedate'] = datetime.strptime(ds.attrs['basedate'],
-        #                                          '%Y-%m-%d %H:%M:%S' )
-        # ds.attrs['validate'] = datetime.strptime(ds.attrs['validate'],
-        #                                              '%Y-%m-%d %H:%M:%S' )
-        # ds.attrs['leadtime'] = timedelta(seconds=int(ds.attrs['leadtime']))
 
         #TODO: Setup the rio projection!!
 

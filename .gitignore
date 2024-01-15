@@ -2,7 +2,7 @@ __pycache__
 
 tmp*
 FA_files/
-
+.virtual_documents
 dist/
 poetry.lock
 

@@ -17,8 +17,12 @@ package_path=str(Path(__file__).parent.resolve())
 
 #Demo path
 import os
-demo_fa = os.path.join(str(Path(package_path).parent.resolve()),
-                       'tests', 'data', 'ICMSHABOF+0732')
+demo_fa_climate = os.path.join(str(Path(package_path).parent.resolve()),
+                               'tests', 'data', 'ICMSHABOF+0732')
+demo_fa_nwp_1 = os.path.join(str(Path(package_path).parent.resolve()),
+                               'tests', 'data', 'PFAR07csm07+0002')
+demo_fa_nwp_2 = os.path.join(str(Path(package_path).parent.resolve()),
+                               'tests', 'data', 'PFAR07csm07+0003')
 
 
 
