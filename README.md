@@ -18,43 +18,11 @@ There are two ways to use the PyFa package:
 * Use this as backand for shell commands to make some basic visualisations.
 
 ### Python package usage
- To use PyFa as a package, import it and try the available functions:
+ To use PyFa as a package, take a look at these notebook examples:
+ * [Demo on the use of the pyfa package](examples/pyfa-python-example.ipynb)
+ * [Demo on the use of collections](examples/FaCollection_demo.ipynb)
 
- ```python
-import pyfa_tool as pyfa
 
-fa_file = "/home/....." #FA file path
-# Inspection of the FA file without reading the data
-FA = pyfa.FaFile(fa_file) #Create an FaFile object
-
-print(FA.get_fieldnames()) #Get dataframe with fieldnames
-FA.describe() #print out detailed description
-
-# Read in the data
-data = pyfa.FaDataset(fa_file)
-#import all available fields
-data.import_fa(whitelist=None,
-               blacklist=None,
-               rm_tmpdir=True,
-               reproj=False,
-               target_epsg='EPSG:4326')
-
-# Plot
-ax = data.plot(variable='CLSTEMPERATURE',
-               level=None,
-               title=None,
-               grid=False,
-               land=None,
-               coastline=None,
-               contour=False,
-               contour_levels=10)
-
-# Save
-data.save_nc(outputfolder='/home/....',
-             filename='netCDF_version_of_FA',
-             overwrite=False)
-
-```
 
 
 ### Setup the shell commands
