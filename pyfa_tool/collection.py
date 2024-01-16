@@ -188,10 +188,13 @@ class FaCollection():
                        combine_attrs='no_conflicts'
                        )
 
-        ds = ds.transpose('y', 'x', 'level', 'validate', 'basedate')
-
         self.ds = ds
+        self._clean()
         self.ds.attrs.update(specific_comb_attributes)
+
+    def _clean(self):
+        """Force a specific data format."""
+        self.ds = self.ds.transpose('y', 'x', 'level', 'validate', 'basedate')
 
 
 def _check_lists_are_equal(list_a, list_b):
