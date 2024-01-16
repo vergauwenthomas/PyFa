@@ -11,11 +11,9 @@ import os
 import sys
 import xarray as xr
 import numpy as np
-import rioxarray
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 import pyfa_tool.modules.IO as IO
-import pyfa_tool.modules.geospatial_functions as geospatial_func
 from pyfa_tool.modules.describe_module import _str_to_dt
 # =============================================================================
 # Formatters
@@ -59,7 +57,7 @@ def _make_level_dimension(nlev):
 
 
 
-def json_to_full_dataset(jsonfile, reproj=True, target_epsg='EPSG:4326', nodata=-999):
+def json_to_full_dataset(jsonfile):
     print('Reading json data')
     data = IO.read_json(jsonfile)
 
@@ -132,10 +130,5 @@ def json_to_full_dataset(jsonfile, reproj=True, target_epsg='EPSG:4326', nodata=
     # Set projection crs
     ds = ds.rio.write_crs(ds.attrs['projection'])
     ds = ds.rio.set_spatial_dims('x', 'y', inplace=True)
-
-    if reproj:
-        ds = geospatial_func.reproject(dataset=ds,
-                                       target_epsg=target_epsg,
-                                       nodata=nodata)
 
     return ds

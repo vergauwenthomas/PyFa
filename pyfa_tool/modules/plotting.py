@@ -34,10 +34,12 @@ import matplotlib.pyplot as plt
 # =============================================================================
 
 def make_regular_fig():
+
     fig, ax = plt.subplots()
     return fig, ax
 
 def make_platcarree_fig():
+    """ Create figure and axes in PlateCarree (only if data in latlon) """
     fig, ax = plt.subplots(subplot_kw={'projection':ccrs.PlateCarree()})
     return fig, ax
 
