@@ -8,6 +8,7 @@ Created on Wed Jan 25 09:16:18 2023
 
 
 import sys, os
+import numpy as np
 from pathlib import Path
 
 
@@ -105,13 +106,15 @@ assert data._get_physical_variables() == [fieldname], 'Something wrong with data
 assert int(data.ds[fieldname].min()) == -11, 'Something wrong with data values'
 
 
+
 # =============================================================================
 # Test whitelist/blacklist multi import (NWP file)
 # =============================================================================
 print('General data import test NWP')
 data = pyfa.FaDataset()
 data.set_fafile(nwp_fa)
-whitelist = ['WIND.U.PHYS', 'CLSTEMPERATURE', 'fakename', "SURFACCPLUIE"]
+whitelist = ['WIND.U.PHYS', 'CLSTEMPERATURE', 'fakename', "SURFACCPLUIE", 'S001RAYT SOL CL',
+             'S087RAYT SOL CL', 'S001RAYT THER CL']
 
 blacklist = ['WIND.U.PHYS', 'fakename2']
 
@@ -123,6 +126,16 @@ data.import_fa(
 
 assert data._get_physical_variables() == ['CLSTEMPERATURE', 'SURFACCPLUIE'], 'Something wrong with data variables'
 assert set(data.ds.dims) == set(['x','y', 'basedate', 'validate', 'level']), 'dimensions not correct'
+
+#Test pseudo fields
+assert 'RAYT THER CL' in data.ds.variables, 'pseudo field not read properly'
+assert 'RAYT SOL CL' in data.ds.variables, 'pseudo field not read properly'
+assert not np.isnan(data.ds['RAYT SOL CL'].sel(level=1).data).any() ,'pseudo field not read properly'
+assert not np.isnan(data.ds['RAYT SOL CL'].sel(level=87).data).any() ,'pseudo field not read properly'
+assert np.isnan(data.ds['RAYT SOL CL'].sel(level=2).data).any() ,'pseudo field not read properly'
+assert np.isnan(data.ds['RAYT THER CL'].sel(level=2).data).any() ,'pseudo field not read properly'
+assert np.isnan(data.ds['RAYT THER CL'].sel(level=87).data).any() ,'pseudo field not read properly'
+assert not np.isnan(data.ds['RAYT THER CL'].sel(level=1).data).any() ,'pseudo field not read properly'
 # =============================================================================
 # Test describe (NWP file)
 # =============================================================================

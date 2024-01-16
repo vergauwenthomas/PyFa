@@ -55,6 +55,8 @@ class FaFile():
         self.fielddf = None #df with fields
 
         self._read_metadata()
+        self._filter_fieldname_types(fieldsdf=self.fielddf,
+                                     nlev = self.metadata['nlev'][0])
 
     # =========================================================================
     #     Special functions ------------
@@ -107,12 +109,50 @@ class FaFile():
 
         """
         describe_module.describe_fa_from_json(metadata=self.metadata,
-                                              fieldslist=self.fielddf.to_dict('records'))
+                                              fieldslist=self.fielddf.to_dict('records'),
+                                              d2fieldnames=self._pure_2d_fieldnames,
+                                              d3fieldnames=self._pure_3d_fieldnames,
+                                              pseudod3fieldnames=self._pure_pseudo_3d_fieldnames)
 
 
     # =========================================================================
     #     Helpers --------------------
     # =========================================================================
+
+    def _filter_fieldname_types(self, fieldsdf, nlev):
+        all_fields = fieldsdf['name'].to_list()
+
+
+        d2_fieldnames = list(set([f for f in all_fields if (not((f.startswith('S')) & (f[1:3].isnumeric())))]))
+
+        multilevels = list(set(all_fields) - set(d2_fieldnames))
+        basenames_multilevels = [f[4:] for f in multilevels]
+
+        d3_fieldnames = []
+        d3_basenames = []
+        pseudo_3d_fieldnames = []
+        pseudo_3d_basenames = []
+        for base in basenames_multilevels:
+            d2_equivalent = [f for f in multilevels if f[4:] == base]
+            if len(d2_equivalent) < nlev:
+                pseudo_3d_basenames.append(base)
+                pseudo_3d_fieldnames.extend(d2_equivalent)
+            else:
+                d3_basenames.append(base)
+                d3_fieldnames.extend(d2_equivalent)
+
+        d2_fieldnames = list(set(d2_fieldnames))
+        d3_fieldnames = list(set(d3_fieldnames))
+        d3_basenames = list(set(d3_basenames))
+        pseudo_3d_fieldnames = list(set(pseudo_3d_fieldnames))
+        pseudo_3d_basenames = list(set(pseudo_3d_basenames))
+
+        self._pure_2d_fieldnames=d2_fieldnames
+        self._pure_3d_fieldnames = d3_fieldnames
+        self._pure_3d_basenames = d3_basenames
+        self._pure_pseudo_3d_basenames = pseudo_3d_basenames
+        self._pure_pseudo_3d_fieldnames = pseudo_3d_fieldnames
+
 
     def _list_all_2d_fieldnames_as_2d_fields(self):
         """
@@ -126,9 +166,24 @@ class FaFile():
             list of 2D fieldnames.
 
         """
-        # find 3d fieldnames in the fielddf
-        only_2d_fields = list(set([f for f in self.fielddf['name'] if (not((f.startswith('S')) & (f[1:3].isnumeric())))]))
-        return only_2d_fields
+
+        return self._pure_2d_fieldnames
+
+    def _list_all_pseudo_3d_fieldnames_as_2d_fields(self):
+        """
+        Get a list of all pseudo 3D fields as pure-2D fields.
+
+        (A pseudo 3D field is a 3D field which is not defined at all levels.)
+        (A pure 2D field is a field which is not defined at multiple levels.)
+
+        Returns
+        -------
+        only_2d_fields : list
+            list of 2D fieldnames.
+
+        """
+
+        return self._pure_pseudo_3d_fieldnames
 
     def _list_all_fieldnames_as_2d_fields(self):
         """
@@ -142,7 +197,8 @@ class FaFile():
             list of all fieldnames
 
         """
-        return self.fielddf['name'].to_list()
+
+        return list(set(self.fielddf['name'].to_list()))
     def _list_all_3d_fieldnames_as_basenames(self):
         """
         Create a list of all basisfieldnames which occures at multiple levels.
@@ -157,8 +213,8 @@ class FaFile():
 
         """
         # find 3d fieldnames in the fielddf
-        basis_3d_names = list(set([f[4:] for f in self.fielddf['name'] if ((f.startswith('S')) & (f[1:3].isnumeric()))]))
-        return basis_3d_names
+
+        return self._pure_3d_basenames
 
 
 
@@ -417,6 +473,11 @@ class FaDataset():
             all_available_fields = FA._list_all_fieldnames_as_2d_fields()
             subset_fields['2d_white'] = [field for field in whitelist if field in all_available_fields]
 
+            # Find the pseudo 3d-fields and add them to the 2d white lists
+            all_available_fields = FA._list_all_pseudo_3d_fieldnames_as_2d_fields()
+            pseudo_2d_extension = [field for field in whitelist if field in all_available_fields]
+            subset_fields['2d_white'].extend(pseudo_2d_extension)
+
             # Find the 3d-whitelist fields
             all_available_3dfields = FA._list_all_3d_fieldnames_as_basenames()
             subset_fields['3d_white'] = [field for field in whitelist if field in all_available_3dfields]
@@ -426,6 +487,7 @@ class FaDataset():
                 sys.exit(f'None of these fields are found in the FA file: {whitelist}')
         else:
             subset_fields['2d_white'] = FA._list_all_2d_fieldnames_as_2d_fields()
+            subset_fields['2d_white'].extend(FA._list_all_pseudo_3d_fieldnames_as_2d_fields())
             subset_fields['3d_white'] = FA._list_all_3d_fieldnames_as_basenames()
 
         # ---------- Blacklist creation -------------------
@@ -445,6 +507,11 @@ class FaDataset():
             # Find the 2d-blacklist fields
             all_available_fields = FA._list_all_fieldnames_as_2d_fields()
             subset_fields['2d_black'] = [field for field in blacklist if field in all_available_fields]
+
+            # Find the pseudo 3d-fields and add them to the 2d black lists
+            all_available_fields = FA._list_all_pseudo_3d_fieldnames_as_2d_fields()
+            pseudo_2d_extension = [field for field in blacklist if field in all_available_fields]
+            subset_fields['2d_black'].extend(pseudo_2d_extension)
 
             # Find the 3d-blacklist fields
             all_available_3dfields = FA._list_all_3d_fieldnames_as_basenames()
@@ -491,6 +558,7 @@ class FaDataset():
         # Update attribute
         self.ds = ds
         self._clean()
+
 
         if reproj:
             self.reproject(target_epsg=target_epsg)
@@ -692,6 +760,8 @@ class FaDataset():
         self._clean()
 
 
+
+
     # =============================================================================
     # Analysis of data
     # =============================================================================
@@ -798,7 +868,26 @@ class FaDataset():
     # =============================================================================
     # Helpers
     # =============================================================================
+    def _format_pseudo_3d_fields(self):
+        ds = self.ds
 
+        # get a list of all variable that are pseudofields
+        all_variables = [var for var in ds.variables if var not in ds.dims]
+        pseudo_vars = [var for var in all_variables if (var.startswith('S') & var[1:3].isnumeric())]
+        pseudo_basenames = list(set([var[4:].strip() for var in pseudo_vars]))
+
+        for basename in pseudo_basenames:
+            # get all pseudovars for this basename
+            cur_pseudo_vars = [var for var in pseudo_vars if var[4:].strip() == basename]
+            cur_levels = [int(var[1:4]) for var in cur_pseudo_vars]
+
+            ds[basename] = xr.concat([ds[var] for var in cur_pseudo_vars],
+                             pd.Index(cur_levels, name='level'))
+
+
+            ds = ds.drop_vars(cur_pseudo_vars, errors='ignore')
+
+        self.ds = ds
     def _set_time_dimensions(self):
         """
         Set up of the time dimension: validate and basedate.
@@ -845,9 +934,11 @@ class FaDataset():
     def _clean(self):
         # make sure the validate and basedate are dimensions with coordinates
         self._set_time_dimensions()
-
+        # Convert pseudo 3d fields to 3d fields
+        self._format_pseudo_3d_fields()
         # Fix dimension order
         self.ds = self.ds.transpose('y', 'x', 'level', 'validate', 'basedate')
+
 
 
 

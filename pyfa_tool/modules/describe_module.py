@@ -11,36 +11,44 @@ from datetime import datetime, timedelta
 from .IO import read_json
 
 
-def _split_fields(fieldslist):
+def _split_fields(fieldslist, d2_list, d3_list, pseudo_list):
     """Split the 2d fields from the 3d fields (other representation in describe)."""
     single_lvl_fields = []
     multi_lvl_fields = {}
+    pseudo_lvl_fields = {}
 
     for field in fieldslist:
         fieldname = field['name'].strip()
-
-        if (fieldname.startswith('S') & fieldname[1:3].isnumeric()):
-            # For 3d fields
+        if fieldname in d2_list:
+            single_lvl_fields.append(field)
+        elif fieldname in d3_list:
             basis_fieldname = fieldname[4:]
             if not basis_fieldname in multi_lvl_fields.keys():
                 init_fielddict = field
                 init_fielddict['full_name'] = fieldname
                 init_fielddict['name'] = basis_fieldname
                 init_fielddict['levels'] = [int(fieldname[1:4])]
-
                 multi_lvl_fields[basis_fieldname] = init_fielddict #update dict
-
             else:
-                # just add level to knonw levels
+                # just add level to known levels
                 multi_lvl_fields[basis_fieldname]['levels'].append(int(fieldname[1:4]))
-        else:
-            # For 2d fields
-            single_lvl_fields.append(field)
+        elif fieldname in pseudo_list:
+            basis_fieldname = fieldname[4:]
+            if not basis_fieldname in pseudo_lvl_fields.keys():
+                init_fielddict = field
+                init_fielddict['full_name'] = fieldname
+                init_fielddict['name'] = basis_fieldname
+                init_fielddict['levels'] = [int(fieldname[1:4])]
+                pseudo_lvl_fields[basis_fieldname] = init_fielddict #update dict
+            else:
+                # just add level to known levels
+                pseudo_lvl_fields[basis_fieldname]['levels'].append(int(fieldname[1:4]))
 
-    return multi_lvl_fields, single_lvl_fields
+
+    return multi_lvl_fields, single_lvl_fields, pseudo_lvl_fields
 
 
-def _print_fields_table(fields_2d, fields_3d):
+def _print_fields_table(fields_2d, fields_3d, fields_pseudo):
     """ Print out the fields information."""
     # First 2d fields
     print('########## 2D ######### \n')
@@ -55,8 +63,15 @@ def _print_fields_table(fields_2d, fields_3d):
     for field in fields_3d.values():
         print(_format_3d_field(field))
 
+    print('\n########## Pseudo 3D ######### \n')
+    print(f'{"Base-name".ljust(19)}{"Full-name example".ljust(19)}{"spectral".ljust(10)}{"nbits".ljust(6)}levels')
+    print('-------------------------------------------------------------')
+    for field in fields_pseudo.values():
+        print(_format_3d_field(field))
 
-def describe_fa_from_json(metadata, fieldslist):
+
+def describe_fa_from_json(metadata, fieldslist,
+                          d2fieldnames, d3fieldnames, pseudod3fieldnames):
     """
     Print out an overview of the FA file content by reading the json FA files.
 
@@ -77,7 +92,10 @@ def describe_fa_from_json(metadata, fieldslist):
     d = metadata
     # fields = read_json(jsonpath=fieldsjson_path, to_dataframe=False)
 
-    multi_lvl_fields, single_lvl_fields = _split_fields(fieldslist)
+    multi_lvl_fields, single_lvl_fields, pseudo_lvl_fields = _split_fields(fieldslist=fieldslist,
+                                                        d2_list=d2fieldnames,
+                                                        d3_list=d3fieldnames,
+                                                        pseudo_list=pseudod3fieldnames)
 
     # formatting datetimes
     validdate = _str_to_dt(d['validate'][0])
@@ -143,7 +161,8 @@ Number of fields        : {d['nfields']}
     ''')
 
     _print_fields_table(fields_2d=single_lvl_fields,
-                        fields_3d=multi_lvl_fields)
+                        fields_3d=multi_lvl_fields,
+                        fields_pseudo=pseudo_lvl_fields)
 
 
 # =============================================================================
