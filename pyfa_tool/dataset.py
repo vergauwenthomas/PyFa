@@ -838,17 +838,16 @@ class FaDataset():
            self._drop_attr(dropkey)
 
 
-        # Fix dimension order
-        self.ds = self.ds.transpose('y', 'x', 'level', 'validate', 'basedate')
+
 
 
 
     def _clean(self):
-        #spatial_ref contians the CRS info, so do not remove it!
-        # if 'spatial_ref' in self.ds.coords:
-            # self.ds = self.ds.drop_vars('spatial_ref') #drop the "spatial_ref" dimension
-
+        # make sure the validate and basedate are dimensions with coordinates
         self._set_time_dimensions()
+
+        # Fix dimension order
+        self.ds = self.ds.transpose('y', 'x', 'level', 'validate', 'basedate')
 
 
 

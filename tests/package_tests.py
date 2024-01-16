@@ -83,6 +83,7 @@ data.import_2d_field(fieldname=fieldname,
                      reproj=False)
 
 
+assert set(data.ds.dims) == set(['x','y', 'basedate', 'validate', 'level']), 'dimensions not correct'
 assert data._get_physical_variables() == [fieldname], 'Something wrong with data variables'
 assert int(data.ds[fieldname].min()) == -5, 'Something wrong with data values'
 assert data.ds[fieldname].dims == ('y', 'x'), 'dimension order not correct'
@@ -97,7 +98,9 @@ fieldname = 'WIND.U.PHYS'
 
 data.import_3d_field(fieldname=fieldname,
                      reproj=False)
-assert data.ds[fieldname].dims == ('level', 'y', 'x'), 'dimension order not correct'
+
+assert set(data.ds.dims) == set(['x','y', 'basedate', 'validate', 'level']), 'dimensions not correct'
+assert set(data.ds[fieldname].dims) == set(['level', 'y', 'x']), 'dimensions of 3d field not correct'
 assert data._get_physical_variables() == [fieldname], 'Something wrong with data variables'
 assert int(data.ds[fieldname].min()) == -11, 'Something wrong with data values'
 
@@ -119,7 +122,7 @@ data.import_fa(
 
 
 assert data._get_physical_variables() == ['CLSTEMPERATURE', 'SURFACCPLUIE'], 'Something wrong with data variables'
-assert list(data.ds.dims) == ['y', 'x', 'level'], 'something wrong with dimensions'
+assert set(data.ds.dims) == set(['x','y', 'basedate', 'validate', 'level']), 'dimensions not correct'
 # =============================================================================
 # Test describe (NWP file)
 # =============================================================================
@@ -135,7 +138,7 @@ data.reproject(target_epsg='EPSG:4326')
 
 assert int(data.ds.coords['y'].max()) == 54 , 'something wrong with reprojecting'
 assert int(data.ds.coords['x'].max()) == 10, ' Something wrong with reprojecting'
-assert list(data.ds.dims) == ['y', 'x', 'level'], 'something wrong with dimensions after reproj'
+assert set(data.ds.dims) == set(['x','y', 'basedate', 'validate', 'level']), 'dimensions not correct'
 # =============================================================================
 # Test plot (NWP file)
 # =============================================================================
@@ -168,7 +171,7 @@ data2.read_nc(file=os.path.join(savefolder, savefile+'.nc'))
 assert int(data2.ds.coords['y'].max()) == 54 , '(read netCDF) something wrong with reprojecting '
 assert int(data2.ds.coords['x'].max()) == 10, '(read netCDF) Something wrong with reprojecting'
 assert data2._get_physical_variables() == ['CLSTEMPERATURE', 'SURFACCPLUIE'], '(read netCDF) Something wrong with data variables'
-assert list(data2.ds.dims) == ['y', 'x', 'level'], '(read netCDF) something wrong with dimensions'
+assert set(data2.ds.dims) == set(['x','y', 'basedate', 'validate', 'level']), 'dimensions not correct'
 
 
 
@@ -187,7 +190,8 @@ data.import_2d_field(fieldname=fieldname,
 
 assert data._get_physical_variables() == [fieldname], 'Something wrong with data variables'
 assert int(data.ds[fieldname].min()) == -21, 'Something wrong with data values'
-assert data.ds[fieldname].dims == ('y', 'x'), 'dimension order not correct'
+assert set(data.ds[fieldname].dims) == set(['y', 'x']), 'dimension of 2d field not correct'
+assert set(data.ds.dims) == set(['x','y', 'basedate', 'validate', 'level']), 'dimensions not correct'
 
 # =============================================================================
 # Test 3D import (climate file)
@@ -199,10 +203,10 @@ fieldname = 'WIND.U.PHYS'
 
 data.import_3d_field(fieldname=fieldname,
                      reproj=False)
-assert data.ds[fieldname].dims == ('level', 'y', 'x'), 'dimension order not correct'
+assert set(data.ds[fieldname].dims) == set(['level', 'y', 'x']), 'dimension of 3d not correct'
 assert data._get_physical_variables() == [fieldname], 'Something wrong with data variables'
 assert int(data.ds[fieldname].min()) == -35, 'Something wrong with data values'
-
+assert set(data.ds.dims) == set(['x','y', 'basedate', 'validate', 'level']), 'dimensions not correct'
 
 # =============================================================================
 # Test whitelist/blacklist multi import (climate file)
@@ -221,7 +225,7 @@ data.import_fa(
 
 
 assert set(data._get_physical_variables()) == set(['CLSTEMPERATURE', "SURFAEROS.LAND"]), 'Something wrong with data variables'
-assert list(data.ds.dims) == ['y', 'x', 'level'], 'something wrong with dimensions'
+assert set(data.ds.dims) == set(['x','y', 'basedate', 'validate', 'level']), 'dimensions not correct'
 # =============================================================================
 # Test describe (climate file)
 # =============================================================================
@@ -237,7 +241,7 @@ data.reproject(target_epsg='EPSG:4326')
 
 assert int(data.ds.coords['y'].max()) == 75 , 'something wrong with reprojecting'
 assert int(data.ds.coords['x'].max()) == 79, ' Something wrong with reprojecting'
-assert list(data.ds.dims) == ['y', 'x', 'level'], 'something wrong with dimensions after reproj'
+assert set(data.ds.dims) == set(['x','y', 'basedate', 'validate', 'level']), 'dimensions not correct'
 # =============================================================================
 # Test plot (climate file)
 # =============================================================================
@@ -269,9 +273,8 @@ data2.read_nc(file=os.path.join(savefolder, savefile+'.nc'))
 
 assert int(data2.ds.coords['y'].max()) == 75 , '(read netCDF) something wrong with reprojecting '
 assert int(data2.ds.coords['x'].max()) == 79, '(read netCDF) Something wrong with reprojecting'
-assert set(data._get_physical_variables()) == set(['CLSTEMPERATURE', "SURFAEROS.LAND"]), 'Something wrong with data variables'
-assert list(data2.ds.dims) == ['y', 'x', 'level'], '(read netCDF) something wrong with dimensions'
-
+assert set(data2._get_physical_variables()) == set(['CLSTEMPERATURE', "SURFAEROS.LAND"]), 'Something wrong with data variables'
+assert set(data2.ds.dims) == set(['x','y', 'basedate', 'validate', 'level']), 'read netCDF dimensions not correct'
 
 
 
