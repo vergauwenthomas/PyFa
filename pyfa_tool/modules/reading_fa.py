@@ -94,31 +94,6 @@ def json_to_full_dataset(jsonfile):
 
     data_vars_2d = {}
     data_vars_3d = {}
-    # data_vars_pseudo_3d = {}
-
-    # def _construct_pseudo_3d_data(all_data, nlev, xcoords):
-    #     pseudo_fieds_dict = {}
-    #     for key, val in all_data.items():
-    #         if isinstance(val, dict):
-    #             if 'type' in val.keys():
-    #                 if val['type'] == ['pseudo_3d']:
-    #                     fieldname = _fmt_fieldname(key[4:])
-    #                     pseudo_fieds_dict[fieldname] = {'type': 'formatted_pseudo'}
-    #                     # get all other keys that repr the same pseudo 3d field
-    #                     all_pseudo_keys = [otherkey for otherkey in all_data.keys() if otherkey[4:] == key[4:]]
-    #                     total_array = np.arange(1, nlev+1) # (nlev, matrix)
-    #                     for pseudo_key in all_pseudo_keys:
-    #                         level=int(pseudo_key[1:4])
-    #                         data =  _fmt_2d_field_to_matrix(datalist = all_data[pseudo_key]["data"],
-    #                                                         xcoords=xcoords)
-
-
-
-
-
-
-
-
 
     for key, val in data.items():
         if isinstance(val, dict):
@@ -133,10 +108,6 @@ def json_to_full_dataset(jsonfile):
                     dataarray = _fmt_3d_field_to_matrix(datalist=val['data'])
                     data_vars_3d[fieldname] = (["y", "x", 'level'], dataarray)
                 elif val['type'] == ['pseudo_3d']:
-                    # # level = int(key[1:4])
-                    # fieldname = _fmt_fieldname(key[4:])
-                    # dataarray = _construct_pseudo_3d_dataa(datalist=val['data'],
-                    #                                           )
                     fieldname = _fmt_fieldname(key)
                     dataarray = _fmt_2d_field_to_matrix(datalist=val['data'],
                                                         xcoords = xcoords)

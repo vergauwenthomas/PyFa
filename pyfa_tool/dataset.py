@@ -209,6 +209,21 @@ class FaFile():
 
         return self._pure_pseudo_3d_fieldnames
 
+    def _list_all_3d_fieldnames_as_2d_fields(self):
+        """
+        Get a list of all 3D fields as pure-2D fields.
+
+        (A pure 2D field is a field which is not defined at multiple levels.)
+
+        Returns
+        -------
+        list
+            list of 2D fieldnames.
+
+        """
+
+        return self._pure_3d_fieldnames
+
     def _list_all_fieldnames_as_2d_fields(self):
         """
         Get a list of all fields.
@@ -512,6 +527,13 @@ class FaDataset():
             all_available_3dfields = FA._list_all_3d_fieldnames_as_basenames()
             subset_fields['3d_white'] = [field for field in whitelist if field in all_available_3dfields]
 
+            # Single level of 3d field (into the 2d white list)
+            all_available_3dfields = FA._list_all_3d_fieldnames_as_2d_fields()
+            specific_level_of_3d = [field for field in whitelist if field in all_available_3dfields]
+            subset_fields['2d_white'].extend(specific_level_of_3d)
+
+
+
             # Check at leas one field is included in the whitelists
             if ((len(subset_fields['2d_white']) == 0) & (len(subset_fields['3d_white']) == 0)):
                 sys.exit(f'None of these fields are found in the FA file: {whitelist}')
@@ -546,6 +568,7 @@ class FaDataset():
             # Find the 3d-blacklist fields
             all_available_3dfields = FA._list_all_3d_fieldnames_as_basenames()
             subset_fields['3d_black'] = [field for field in blacklist if field in all_available_3dfields]
+
 
             # Check at leas one field is included in the blacklists
             if ((len(subset_fields['2d_white']) == 0) & (len(subset_fields['3d_white']) == 0)):
@@ -918,6 +941,12 @@ class FaDataset():
         pseudo_basenames = list(set([var[4:].strip() for var in pseudo_vars]))
 
         for basename in pseudo_basenames:
+            # If basename already present than skip (we assume that the basename
+            # contains all the data)
+            if basename in all_variables:
+                print(f'WARNING: {basename} is already a field and will not be the target of pseudo fields.')
+                continue
+
             # get all pseudovars for this basename
             cur_pseudo_vars = [var for var in pseudo_vars if var[4:].strip() == basename]
             cur_levels = [int(var[1:4]) for var in cur_pseudo_vars]
@@ -925,9 +954,7 @@ class FaDataset():
             ds[basename] = xr.concat([ds[var] for var in cur_pseudo_vars],
                              pd.Index(cur_levels, name='level'))
 
-
             ds = ds.drop_vars(cur_pseudo_vars, errors='ignore')
-
         self.ds = ds
 
     def _set_time_dimensions(self):
