@@ -28,6 +28,7 @@ def _fmt_fieldname(string):
     return string.strip()
 
 
+
 def _fmt_2d_field_to_matrix(datalist, xcoords):
     xlen = xcoords.shape[0]
     # ylen = ycoords.shape[0]
@@ -47,9 +48,7 @@ def _fmt_3d_field_to_matrix(datalist):
 
 
 def _make_level_dimension(nlev):
-    levlist = list(np.arange(nlev))
-    return np.asarray(levlist)
-
+    return np.arange(1, nlev+1)
 
 # =============================================================================
 #  Json to xarray
@@ -95,6 +94,7 @@ def json_to_full_dataset(jsonfile):
 
     data_vars_2d = {}
     data_vars_3d = {}
+
     for key, val in data.items():
         if isinstance(val, dict):
             if 'type' in val.keys():
@@ -107,6 +107,13 @@ def json_to_full_dataset(jsonfile):
                     fieldname = _fmt_fieldname(key)
                     dataarray = _fmt_3d_field_to_matrix(datalist=val['data'])
                     data_vars_3d[fieldname] = (["y", "x", 'level'], dataarray)
+                elif val['type'] == ['pseudo_3d']:
+                    fieldname = _fmt_fieldname(key)
+                    dataarray = _fmt_2d_field_to_matrix(datalist=val['data'],
+                                                        xcoords = xcoords)
+                    data_vars_2d[fieldname] = (["y", "x"], dataarray)
+
+
                 else:
                     sys.exit(f'unknown type {val["type"]} for {key}')
 

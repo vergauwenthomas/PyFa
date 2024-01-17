@@ -8,6 +8,7 @@ Created on Wed Jan 25 09:16:18 2023
 
 
 import sys, os
+import numpy as np
 from pathlib import Path
 
 
@@ -105,13 +106,20 @@ assert data._get_physical_variables() == [fieldname], 'Something wrong with data
 assert int(data.ds[fieldname].min()) == -11, 'Something wrong with data values'
 
 
+
 # =============================================================================
 # Test whitelist/blacklist multi import (NWP file)
 # =============================================================================
 print('General data import test NWP')
 data = pyfa.FaDataset()
 data.set_fafile(nwp_fa)
-whitelist = ['WIND.U.PHYS', 'CLSTEMPERATURE', 'fakename', "SURFACCPLUIE"]
+whitelist = ['WIND.U.PHYS', #test 3d field
+             'CLSTEMPERATURE', #test 2d field
+             'fakename', # test fake field
+             "SURFACCPLUIE", #test multiple fields
+             'S001RAYT SOL CL', 'S087RAYT SOL CL', 'S001RAYT THER CL', #test pseudo fields
+             "S004WIND.U.PHYS", "S032WIND.U.PHYS", "S018TEMPERATURE", #test specific fields of 3d
+             ]
 
 blacklist = ['WIND.U.PHYS', 'fakename2']
 
@@ -121,8 +129,26 @@ data.import_fa(
                reproj=False)
 
 
-assert data._get_physical_variables() == ['CLSTEMPERATURE', 'SURFACCPLUIE'], 'Something wrong with data variables'
+assert set(data._get_physical_variables()) == set(['CLSTEMPERATURE','SURFACCPLUIE','RAYT SOL CL','WIND.U.PHYS','RAYT THER CL','TEMPERATURE']), 'Something wrong with data variables'
 assert set(data.ds.dims) == set(['x','y', 'basedate', 'validate', 'level']), 'dimensions not correct'
+
+assert np.isnan(data.ds['WIND.U.PHYS'].sel(level=1).data).any() ,'2d field of 3dfield not read properly'
+assert not np.isnan(data.ds['WIND.U.PHYS'].sel(level=32).data).any() ,'2d field of 3dfield not read properly'
+assert not np.isnan(data.ds['WIND.U.PHYS'].sel(level=4).data).any() ,'2d field of 3dfield not read properly'
+assert np.isnan(data.ds['TEMPERATURE'].sel(level=1).data).any() ,'2d field of 3dfield not read properly'
+assert not np.isnan(data.ds['TEMPERATURE'].sel(level=18).data).any() ,'2d field of 3dfield not read properly'
+
+#Test pseudo fields
+assert 'RAYT THER CL' in data.ds.variables, 'pseudo field not read properly'
+assert 'RAYT SOL CL' in data.ds.variables, 'pseudo field not read properly'
+assert not np.isnan(data.ds['RAYT SOL CL'].sel(level=1).data).any() ,'pseudo field not read properly'
+assert not np.isnan(data.ds['RAYT SOL CL'].sel(level=87).data).any() ,'pseudo field not read properly'
+assert np.isnan(data.ds['RAYT SOL CL'].sel(level=2).data).any() ,'pseudo field not read properly'
+assert np.isnan(data.ds['RAYT THER CL'].sel(level=2).data).any() ,'pseudo field not read properly'
+assert np.isnan(data.ds['RAYT THER CL'].sel(level=87).data).any() ,'pseudo field not read properly'
+assert not np.isnan(data.ds['RAYT THER CL'].sel(level=1).data).any() ,'pseudo field not read properly'
+
+
 # =============================================================================
 # Test describe (NWP file)
 # =============================================================================
@@ -170,7 +196,7 @@ data2.read_nc(file=os.path.join(savefolder, savefile+'.nc'))
 
 assert int(data2.ds.coords['y'].max()) == 54 , '(read netCDF) something wrong with reprojecting '
 assert int(data2.ds.coords['x'].max()) == 10, '(read netCDF) Something wrong with reprojecting'
-assert data2._get_physical_variables() == ['CLSTEMPERATURE', 'SURFACCPLUIE'], '(read netCDF) Something wrong with data variables'
+assert set(data2._get_physical_variables()) == set(['CLSTEMPERATURE','SURFACCPLUIE','RAYT SOL CL','WIND.U.PHYS','RAYT THER CL','TEMPERATURE']), 'Something wrong with data variables'
 assert set(data2.ds.dims) == set(['x','y', 'basedate', 'validate', 'level']), 'dimensions not correct'
 
 

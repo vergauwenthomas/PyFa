@@ -58,7 +58,36 @@ basenames3D = unique(basenames3D) #avoid to read in a 3d field multiple times
 
 
 
-# Collect metadata
+# Get all the specific 2D fields in the whitelist that are levels
+# of the 3D field.
+specific_2d = c()
+for (d3_level in fieldnames3D) {
+    if (trimws(d3_level) %in% d2_whitelist){
+        specific_2d = c(specific_2d, d3_level)
+    }
+}
+
+
+#filter pseudo 3d fields (fields defined at multiple but not all levels).
+#These must be read in by Fadec and not Fadec3d !!
+nlev = attr(x,  'frame')$nlev
+fieldnames_pseudo3D = c()
+for (basename in basenames3D) {
+  d2_levels = fieldnames3D[grep(paste0("S\\d\\d\\d",basename), fieldnames3D)] #get 2D according fields
+  if (length(d2_levels) < nlev){
+    fieldnames_pseudo3D = c(fieldnames_pseudo3D, d2_levels)
+    basenames3D = basenames3D[basenames3D != basename] #drop pseudo field from 3d basenames
+    fieldnames3D = fieldnames3D[!(fieldnames3D %in% d2_levels)] #drop pseudo fields from 3d fieldnames
+    specific_2d = specific_2d[!(specific_2d %in% d2_levels)] #drop pseudo fields from specific 3d levels
+  }
+}
+
+
+# ---------------------------------------------
+# ------------ Collect metadata -------------
+#----------------------------------------------
+
+
 dummy_field = fieldnames2D[1]
 y = FAdec(x, dummy_field)
 #check if x and y are chosing correctly and not verwisseld
@@ -110,8 +139,12 @@ toadd <- list('basedate'=toString(attr(y, "info")$time$basedate),
 
 data['pyfa_metadata'] = list(toadd)
 
+# ---------------------------------------------
+# ------------ Collect data -------------
+#----------------------------------------------
 
-#Loop over all fields
+
+#Loop over all 2d fields
 for (fieldname in fieldnames2D) {
   if (trimws(fieldname) %in% d2_whitelist){
     if (trimws(fieldname) %in% d2_blacklist){
@@ -139,7 +172,62 @@ for (fieldname in fieldnames2D) {
 }
 
 
+#Loop over all pseudo 3D fields
+for (fieldname in fieldnames_pseudo3D) {
+  if (trimws(fieldname) %in% d2_whitelist){ #Keep in mind pseudo 3D whitelist are interpreted as 2d whitelist
+    if (trimws(fieldname) %in% d2_blacklist){  #Keep in mind pseudo 3D blacklist are interpreted as 2d whitelist
+      print(paste0(fieldname, ' (pseudo3D) rejected by blacklist'))
+    }else{
+      tryCatch(
+        #try to do this
+        {
+          print(paste0(fieldname, ' (pseudo3D) reading ...'))
+          y = FAdec(x, fieldname)
+          toadd <- list('data'=array(y[]), 'type'='pseudo_3d')
+          data[fieldname] = list(toadd)
 
+        },
+        #if an error occurs, tell me the error
+        error=function(e) {
+          message('An Error Occurred for this (pseudo3D) field')
+          print(e)
+        }
+      )
+    }
+  }else{
+    print(paste0(fieldname, '(pseudo3D) not in whitelist'))
+  }
+}
+
+
+#Loop over specific whitelist fields that are levels of 3d fields
+for (fieldname in specific_2d) {
+  if (trimws(fieldname) %in% d2_whitelist){ #Keep in mind pseudo 3D whitelist are interpreted as 2d whitelist
+    if (trimws(fieldname) %in% d2_blacklist){  #Keep in mind pseudo 3D blacklist are interpreted as 2d whitelist
+      print(paste0(fieldname, ' (Specific level of 3D) rejected by blacklist'))
+    }else{
+      tryCatch(
+        #try to do this
+        {
+          print(paste0(fieldname, ' (Specific level of 3D) reading ...'))
+          y = FAdec(x, fieldname)
+          toadd <- list('data'=array(y[]), 'type'='pseudo_3d')
+          data[fieldname] = list(toadd)
+
+        },
+        #if an error occurs, tell me the error
+        error=function(e) {
+          message('An Error Occurred for this (Specific level of 3D) field')
+          print(e)
+        }
+      )
+    }
+  }else{
+    print(paste0(fieldname, '(Specific level of 3D) not in whitelist'))
+  }
+}
+
+#loop over all 3d basename fields
 
 for (basename in basenames3D) {
   if (trimws(basename) %in% d3_whitelist){
