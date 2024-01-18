@@ -25,7 +25,7 @@ class FaCollection():
         FaDatasets : list, optional
             A list of FaDatasets. The default is [].
         combine : bool, optional
-            If True, setting FaDatasets will also automatically combined them by validate to one xarray.Dataset object.
+            If True, setting FaDatasets will also automatically combined them by validate to one xarray.Dataset object. Default is False.
 
         Returns
         -------
