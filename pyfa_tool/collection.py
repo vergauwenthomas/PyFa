@@ -16,7 +16,7 @@ import pyfa_tool.modules.IO as IO
 class FaCollection():
     """This class holds methods and data for combining FaDatasets to one object."""
 
-    def __init__(self, FaDatasets=[]):
+    def __init__(self, FaDatasets=[], combine=False):
         """
         Initialize a FaCollection.
 
@@ -24,6 +24,8 @@ class FaCollection():
         ----------
         FaDatasets : list, optional
             A list of FaDatasets. The default is [].
+        combine : bool, optional
+            If True, setting FaDatasets will also automatically combined them by validate to one xarray.Dataset object.
 
         Returns
         -------
@@ -32,6 +34,7 @@ class FaCollection():
         """
         self.ds = None
         self.FaDatasets = FaDatasets
+        self.combine = combine
 
     # =========================================================================
     # Specials
@@ -77,6 +80,10 @@ class FaCollection():
 
         self.FaDatasets = FaDatasets
 
+        # Combine if specified
+        if self.combine:
+            self.combine_by_validate()
+
     def set_fadatasets_by_file_regex(self, searchdir, filename_regex='*', **kwargs):
         """
         Update the FaDatasets of this collection by using regex expression of filenames.
@@ -112,6 +119,10 @@ class FaCollection():
 
         # Add them as attribute
         self.set_fadatasets(FaDatasets=fadatasets)
+
+        # Combine if specified
+        if self.combine:
+            self.combine_by_validate()
 
     def combine_by_validate(self):
         """
