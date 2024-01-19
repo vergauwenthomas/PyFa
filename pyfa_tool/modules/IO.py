@@ -256,6 +256,7 @@ def save_as_nc(xrdata, outputfolder, filename, overwrite=False, **kwargs):
 
     # convert to nc
     xrdata.to_netcdf(path=target_file,
+                      engine='netcdf4',
                       mode='w',
                       **kwargs)
     print(f'Data saved to {target_file}')

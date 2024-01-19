@@ -27,7 +27,8 @@ demo_fa_nwp_2 = os.path.join(str(Path(package_path).parent.resolve()),
 
 
 #User accesable classes
-from pyfa_tool.dataset import FaDataset, FaFile
+from pyfa_tool.file import FaFile
+from pyfa_tool.dataset import FaDataset
 from pyfa_tool.collection import FaCollection
 
 
