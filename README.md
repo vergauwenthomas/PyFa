@@ -39,9 +39,10 @@ This file will add the `pyfa` alias to your `~\.bashrc` file, and will propagate
 ## Shell Usage
 The FA file, and some settings are given throug arguments ex.:
 ```bash
-pyfa FA_file --print_fields --proj=EPSG:4326 --save
+pyfa -d  PFAR07+0001 # --> describe the content of a file
+pyfa -c --whitelist=CLSTEMPERATURE,CLSVENT.ZONAL --proj=EPSG:4326 PFAR*+000* # --> convert a FA-file, or a collection of them (by regex) to a netCDF file.
+pyfa -p --whitelist=CLSTEMPERATURE --proj=EPSG:4326 PFAR07+0002 vmin=294 cmap='viridis' # --> 2D plot of (reprojected) field with **kwargs passed to the plot.
 ```
-
 To see all possible arguements run `pyfa -h`. (Don't forget to setup the shell commands first)
 
 
