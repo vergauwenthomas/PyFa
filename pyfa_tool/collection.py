@@ -16,7 +16,7 @@ import pyfa_tool.modules.IO as IO
 class FaCollection():
     """This class holds methods and data for combining FaDatasets to one object."""
 
-    def __init__(self, FaDatasets=[]):
+    def __init__(self, FaDatasets=[], combine_by_validate=False):
         """
         Initialize a FaCollection.
 
@@ -24,6 +24,9 @@ class FaCollection():
         ----------
         FaDatasets : list, optional
             A list of FaDatasets. The default is [].
+        combine_by_validate : bool, optional
+            If True, setting FaDatasets will also automatically combined them
+            by validate to one xarray.Dataset object. Default is False.
 
         Returns
         -------
@@ -31,11 +34,16 @@ class FaCollection():
 
         """
         self.ds = None
-        self.FaDatasets = FaDatasets
-
+        self._combine_on_validate = combine_by_validate
+        if bool(FaDatasets):
+            #Sets the FaDatasets attribute + apply some checks + combine data if combinemethod is provided!
+            self.set_fadatasets(FaDatasets)
+        else:
+            self.FaDatasets=[]
     # =========================================================================
     # Specials
     # =========================================================================
+
     def __repr__(self):
         """String representation."""
         if self.ds is not None:
@@ -44,7 +52,6 @@ class FaCollection():
             return f'FaCollection that holds {len(self.FaDatasets)} FaDatasets, not yet been combined.'
         return 'empty instance of a FaCollection.'
 
-
     def __str__(self):
         """String typecaste representation."""
         if self.ds is not None:
@@ -52,7 +59,6 @@ class FaCollection():
         if bool(self.FaDatasets):
             return f'FaCollection that holds {len(self.FaDatasets)} FaDatasets, not yet been combined.'
         return 'empty instance of a FaCollection.'
-
 
     # =============================================================================
     # Getters/setters
@@ -86,6 +92,10 @@ class FaCollection():
         # TODO: check for duplicates here
 
         self.FaDatasets = FaDatasets
+
+        # Combine if specified
+        if self._combine_on_validate:
+            self.combine_by_validate()
 
     def set_fadatasets_by_file_regex(self, searchdir, filename_regex='*', **kwargs):
         """
@@ -123,6 +133,14 @@ class FaCollection():
         # Add them as attribute
         self.set_fadatasets(FaDatasets=fadatasets)
 
+        # Combine if specified
+        if self._combine_on_validate:
+            self.combine_by_validate()
+
+    # =============================================================================
+    # Merge Dataset methods
+    # =============================================================================
+
     def combine_by_validate(self):
         """
         Combine all datasets by mergeing on the validate-dimension.
@@ -147,7 +165,6 @@ class FaCollection():
         For NWP and ensemble applications, the validate does not make an FA file
         unique. So a combine on multiple dimensions is prefered for some of these
         applications.
-
         """
         FaDatasets = self.FaDatasets
 
@@ -202,13 +219,13 @@ class FaCollection():
         self._clean()
         self.ds.attrs.update(specific_comb_attributes)
 
-
-
+    # =========================================================================
+    # IO
+    # =========================================================================
 
     def save_nc(self, outputfolder, filename, overwrite=False, **kwargs):
         """
         Save the xarray.Dataset as a netCDF file.
-
 
         Parameters
         ----------
@@ -239,8 +256,9 @@ class FaCollection():
                       overwrite=overwrite,
                       **kwargs)
 
-
-
+    # =========================================================================
+    #     Helpers
+    # =============================================================================
 
     def _clean(self):
         """Force a specific data format."""
