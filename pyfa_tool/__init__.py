@@ -8,7 +8,7 @@ Created on Mon Jan 23 17:20:08 2023
 
 
 
-__version__ = "0.0.2a"
+__version__ = "0.0.2b"
 
 #Important paths
 from pathlib import Path
