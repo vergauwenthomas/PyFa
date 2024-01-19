@@ -2,10 +2,12 @@ __pycache__
 
 tmp*
 FA_files/
-
+.virtual_documents
 dist/
 poetry.lock
+*.ipynb_checkpoints*
 
+examples/*.nc
 tests/data/*
 
 *.png

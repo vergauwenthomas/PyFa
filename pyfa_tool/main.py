@@ -6,16 +6,11 @@ Created on Fri Jan 20 16:29:28 2023
 @author: thoverga
 """
 
-from modules import to_xarray, plotting, IO
+
 import os
 import sys
 import shutil
 import argparse
-import json
-
-import subprocess
-import xarray
-import matplotlib.pyplot as plt
 
 main_path = os.path.dirname(__file__)
 sys.path.append(main_path)
@@ -23,34 +18,69 @@ sys.path.append(main_path)
 
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser(description='FA plotting as a python wrapper',
+    parser = argparse.ArgumentParser(prog='PyFA-tool',
+                                     formatter_class=argparse.RawDescriptionHelpFormatter,
+                                     description="""
+PyFA: a tool for scientist working with ACCORD-FA files.
+--------------------------------------------------------
+
+The following functionality is available:
+    * -p, --plot (make as spatial plot of an 2D field.)
+    * -d, --describe (print out information of a FA file.)
+    * -c, -- convert (convert a FA file to netCDF)""",
+
                                      epilog='''
                                                 Add kwargs as you like as arguments. The position of these arguments is not of importance.
                                                 These will be added to the plot functions (matplotlib).
                                                 Example: .... vmin=288 vmax=294 cmap=?? ... '''
                                      )
 
-    parser.add_argument("file", help="FA filename of path.", default='') #argument without prefix
+    parser.add_argument("file", help="FA filename, path of FA file or similar regex expression on filenames.", default='')  # argument without prefix
 
-    # parser.add_argument("-p", "--plot", help="Make plot",
-    #                     default=True, action="store_true")
-    parser.add_argument("--print_fields", help="print available fields",
-                        default=False, action="store_true")
-    parser.add_argument("-f", "--file", help="FA filename of path.", default='')
-    parser.add_argument("--field", help="fieldname", default='SFX.T2M')
-    parser.add_argument("--get_fieldnames", help="Write fieldnames to a file in the cwd.",
-                        default=False, action="store_true")
-
-    parser.add_argument("--proj", help="Reproject to this crs (ex: EPSG:4326)", default='EPSG:4326')
-
-
-
-    parser.add_argument("--save", help="Save plot to file",
+    # Which mode arguments
+    parser.add_argument('-p', '--plot', help='Make as spatial plot of a 2D field.',
+                        default=True, action='store_true')
+    parser.add_argument('-d', '--describe', help='Print out overview info of the FA file',
+                        default=False, action='store_true')
+    parser.add_argument('-c', '--convert', help='Convert to netCDF',
                         default=False, action='store_true')
 
-    parser.add_argument('kwargs', help='Extra arguments passed to the plot function.', nargs='*')
+    parser.add_argument('--whitelist', help='list of fieldnames to read (seperated by ,). If emtpy, all fields are read.',
+                        default='')
+
+    parser.add_argument("--combine_by_validate", help="If file is a regex expression, matching multiple FA files, they are combined on the validate dimension if True.",
+                        default=True, action="store_true")
+
+    default_2dfieldname = 'SFX.T2M'
+    parser.add_argument("--field", help="fieldname", default=default_2dfieldname)
+    parser.add_argument("--proj", help="Reproject to this crs (ex: EPSG:4326)", default='') #default no reproj
+
+    parser.add_argument('kwargs', help='Extra arguments passed to the plot function. (must follow directly the file argurment, and as last arg)', nargs='*')
 
     args = parser.parse_args()
+
+    # =============================================================================
+    # Setup PyFA mode
+    # =============================================================================
+    if (args.describe | args.convert):
+        # no plotting when describing or converting
+        args.plot = False
+
+    # Check if mode is unique
+    _selected = [count for count in [args.plot, args.describe, args.convert] if count is True]
+    if len(_selected) > 1:
+        sys.exit("Select either one of --plot, --describe or --convert.")
+    if len(_selected) == 0:
+        # Because of default true for plot this should never be triggered.
+        sys.exit("Select either one of --plot, --describe or --convert.")
+
+    # =============================================================================
+    # Import required modules (so they are not loaded with --help)
+    # =============================================================================
+    import pyfa_tool as pyfa
+    # from pyfa_tool.modules import plotting
+    import matplotlib.pyplot as plt
+    from pathlib import Path
 
     # =============================================================================
     # Check arguments
@@ -58,133 +88,199 @@ if __name__ == "__main__":
 
     assert args.file != "", 'No file specified in arguments.'
 
+    #construct whitelist
+    whitelist = args.whitelist
+    if whitelist != "":
+        whitelist = str(args.whitelist).replace(' ', '').split(',')
+    else:
+        whitelist = []
+
+    # =============================================================================
+    # Create kwargs
+    # =============================================================================
+
+    def is_number(s):
+        try:
+            float(s)
+            return True
+        except ValueError:
+            return False
+
+    #attention: If a regex expression is given as filename, the first match is set to the
+    # args.file and the others are set to the kwargs !!! So the kwargs are a list with
+    #matching filenames and method kwargs that have the = symbol in them.
+
+    #So split the method kwargs from the filename regexes
+
+
+    kwarg_list_str = args.kwargs
+    kwargs = {}
+
+    matching_paths = []
+
+    for kwargstr in kwarg_list_str:
+        #1. check if kwargstr has the = sighn in it, if so add in to the methodkwargs
+        if '=' in str(kwargstr):
+            key=kwargstr.split('=')[0]
+            val=kwargstr.split('=')[1]
+            if is_number(val):
+                val = float(val)
+
+            kwargs[key] = val
+        #2. test if the kwargstr represent a filename
+        else:
+            testfilepath = os.path.join(os.getcwd(), str(kwargstr))
+            if os.path.isfile(testfilepath):
+                matching_paths.append(testfilepath)
+            else:
+                print(f'WARNING: {kwargstr} is skipped as kwarg since it is not formatted with a "=" character.')
+
+    # add the file arg to the list of file_matches if there are filematches
+    if bool(matching_paths):
+        matching_paths.insert(0, os.path.join(os.getcwd(), str(args.file)))
+        is_fafile=False #True for a single FA file, false for a pointer to multiple FA files
+    else:
+        is_fafile=True
+
+
     # =============================================================================
     # Forming the path
     # =============================================================================
+    if is_fafile:
+        file_expr = str(args.file)
+        # 1. Check if argument is the path to a file --> use this if True
+        if os.path.isfile(file_expr):
+            fa_file = file_expr
 
-    fa_file = str(args.file)
-    if not os.path.isfile(fa_file):
-        # test if relative path is given
-        fa_file = os.path.join(os.getcwd(), args.file)
+        # 2. Check if argument is the name of a single Fafile in the cwd --> use this if True
+        elif (os.path.isfile(os.path.join(os.getcwd(), file_expr))):
+            fa_file = os.path.join(os.getcwd(), file_expr)
 
-    assert os.path.isfile(fa_file), f'{args.file} not found.'
-
-
-    # =============================================================================
-    # Convert FA to json
-    # =============================================================================
-
-    # 1  create tmp workdir
-    tmpdir = os.path.join(os.getcwd(), 'tmp_fajson')
-    tmpdir_available = False
-    while tmpdir_available == False:
-        if os.path.exists(tmpdir):  # Do not overwrite if this dir exists already
-            tmpdir += '_a'
         else:
-            tmpdir_available = True
-
-    os.makedirs(tmpdir)
-
-    # Launch Rfa to convert FA to json
-    r_script = os.path.join(main_path, 'modules', 'Fa_to_file.R')
-    subprocess.call(["/usr/bin/Rscript", r_script, fa_file, args.field, tmpdir])
-
-    # =============================================================================
-    # Paths to output
-    # =============================================================================
-    json_path = os.path.join(tmpdir, 'FAdata.json')
-    fields_json_path = os.path.join(tmpdir, 'fields.json')
-
-    # =============================================================================
-    # Write fieldnames info to file if needed
-    # =============================================================================
-
-    if args.get_fieldnames:
-        # fieldnames json is alway created, convert them to csv and write in cwd
-        all_fields_csv_path = os.path.join(os.getcwd(), 'fieldnames.csv')
-        fielddata = IO.read_json(jsonpath=fields_json_path,
-                                 to_dataframe=True)
-        IO.write_to_csv(fielddata, all_fields_csv_path)
-        print(f'All available fields are writen to {all_fields_csv_path}.')
+            sys.exit(f'{file_expr} is not found.')
 
 
-    # =============================================================================
-    # check if json file is created
-    # =============================================================================
 
-    if not os.path.isfile(json_path):
-        print(f'{args.field} not found in {fa_file}.')
+    # Sanity checks
+    if is_fafile:
+        assert pyfa.modules.IO.check_file_exist(fa_file), f'{file_expr} not found.'
 
-        # print available fields
-        fieldsdf = IO.read_json(jsonpath=fields_json_path,
-                                to_dataframe=True)
-
-        if fieldsdf.shape[0] > 100:
-            fieldsdf = fieldsdf[0:100]
-            print(
-                f'There are {fieldsdf.shape[0]} stored in the {fa_file}. Here are the first 100 fields:')
-        else:
-            print(f'There are {fieldsdf.shape[0]} stored in the {fa_file}:')
-        print(fieldsdf)
-        print('To list all fields, add the --get_fieldnames argument so that all fieldnames will be writen to file.')
-
-        shutil.rmtree(tmpdir)
-        sys.exit(f'{args.field} not found in {fa_file}.')
-
-
-    # =============================================================================
-    # Make xarray from json
-    # =============================================================================
-    if args.proj == '':
-        reproj_bool = False
     else:
-        reproj_bool = True
+        assert len(matching_paths) > 0, f'No file candidates found for by searching candidates on {file_expr}'
 
-    data = to_xarray.json_to_rioxarray(json_path=json_path,
-                                       reproject=reproj_bool,
-                                       target_epsg=args.proj)
-
-    # =============================================================================
-    # Delete json data
-    # =============================================================================
-
-    shutil.rmtree(tmpdir)
+    #if regext matches only one Fafile, interpret is as a single Fafile
+    if (not is_fafile):
+        if (len(matching_paths) == 1):
+            print('WARNING: only a single file matches the {file_expr} expression, so interpret it as a single FA-file: {matching_paths[0]}')
+            fa_file = matching_paths[0]
+            is_fafile=True
+            assert pyfa.modules.IO.check_file_exist(fa_file), f'{file_expr} not found.' #Overkill?
 
 
-    # =============================================================================
-    # Check for plotting kwargs
-    # =============================================================================
-    kwargs = IO.make_kwarg_dict(args.kwargs)
 
 
     # =============================================================================
-    # make plot
+    # Describe mode
     # =============================================================================
-
-
-    if args.save:
-        # make output filepath
-        origin = data.attrs['origin']
-        if origin[-4:] == '.sfx':
-            filename = f'{origin[:-4]}_{args.field}.png'
-        elif origin[-3:] == '.FA':
-            filename = f'{origin[:-3]}_{args.field}.png'
+    if args.describe:
+        if is_fafile:
+            FA = pyfa.FaFile(fa_file)
+            FA.describe()
         else:
-            filename = f'{origin}_{args.field}.png'
-
-        filepath = os.path.join(os.getcwd(), filename)
+            sys.exit('Describe is not implemented for multiple FA-files.')
 
 
+    # =============================================================================
+    # Plot (2d) mode
+    # =============================================================================
 
-    fig, axs = plotting.make_fig()
-    plotting.make_plot(dxr=data,
-                       ax=axs,
-                       #TODO pass arguments as kwargs
-                       **kwargs
+    if args.plot:
+        if is_fafile:
+            ds = pyfa.FaDataset(fa_file, nodata=-999) #Create dataset
+
+            if args.proj == '':
+                reproj_bool = False
+            else:
+                reproj_bool = True
+
+            if ((len(whitelist)==1) & (str(args.field) == default_2dfieldname)):
+                d2fieldname = whitelist[0]
+            else:
+                d2fieldname = str(args.field)
+
+            # import the 2d field
+            ds.import_2d_field(fieldname=d2fieldname,
+                               rm_tmpdir=True,
+                               reproj=reproj_bool,
+                               target_epsg=args.proj,
+                               )
+            print(ds)
+            # plot the 2d field
+            ds.plot(variable=d2fieldname,
+                    **kwargs)
+            plt.show()
+        else:
+            sys.exit('Plot is not implemented for multiple FA-files.')
+
+
+    # =============================================================================
+    # Convert to netCDF mode
+    # =============================================================================
+    if args.convert:
+
+        #construct arguments to pass to FaDataset import Fa methods
+        if args.proj == '':
+            reproj_bool = False
+        else:
+            reproj_bool = True
+
+        trg_epsg = args.proj
+        whitelist = whitelist
+        blacklist=[]
+
+        if is_fafile:
+            ds = pyfa.FaDataset(fa_file) #Create dataset
+
+            # Write to netCDF file
+            target_dir = str(Path(fa_file).parent)
+            target_file = str(Path(fa_file).stem) + '.nc'
+
+            # import all field
+            ds.import_fa(whitelist=whitelist,
+                         blacklist=blacklist,
+                         reproj=reproj_bool,
+                         target_epsg=trg_epsg)
+
+            # save to nc
+            ds.save_nc(outputfolder=target_dir,
+                       filename=target_file,
                        )
+        else:
+            if args.combine_by_validate:
 
-    if args.save:
-        plotting.save_plot(fig=fig, filepath=filepath, fmt='png')
+                col = pyfa.FaCollection() # 1. init colleciton
+                # 2: set Fadatasets
+                datasets = []
+                for fafilepath in matching_paths:
+                    ds = pyfa.FaDataset(fafilepath) #Create dataset
+                    # import all field
+                    ds.import_fa(whitelist=whitelist,
+                                 blacklist=blacklist,
+                                 reproj=reproj_bool,
+                                 target_epsg=trg_epsg)
+                    datasets.append(ds)
 
+                col.set_fadatasets(FaDatasets=datasets)
 
-    plt.show()
+                # 3: combine by validate
+                col.combine_by_validate()
+
+                # 4. save to nc
+                target_file = f"collection.nc"
+                col.save_nc(outputfolder=os.getcwd(),
+                           filename=target_file,
+                           )
+
+            else:
+                sys.exit('In the CLI only the "combine by validate" combinatin technique is implented for a colleciton of FA-files.')
+

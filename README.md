@@ -18,24 +18,11 @@ There are two ways to use the PyFa package:
 * Use this as backand for shell commands to make some basic visualisations.
 
 ### Python package usage
- To use PyFa as a package, import it and try the available functions:
-
- ```python
-import pyfa_tool as pyfa
-
-# Get available fields
-fielddf = pyfa.get_fields(fa_filepath=path_to_fa_file)
-print(fielddf) #Note that not all rows are printed (default pandas settings).
+ To use PyFa as a package, take a look at these notebook examples:
+ * [Demo on the use of the pyfa package](examples/pyfa-python-example.ipynb)
+ * [Demo on the use of collections](examples/FaCollection_demo.ipynb)
 
 
-# convert to an Xarray.DataArray
-dxr = pyfa.FA_to_Xarray(fa_filepath=path_to_fa_file,
-                  fieldname='SURFTEMPERATURE',
-                  target_crs='EPSG:4326')
-# info and plotting:
-print(dxr) #Don' panic if you see Nan's in the data, this is often so for the corners because of reprojecting.
-dxr.plot() #Matplotlib backend
-```
 
 
 ### Setup the shell commands
@@ -52,9 +39,10 @@ This file will add the `pyfa` alias to your `~\.bashrc` file, and will propagate
 ## Shell Usage
 The FA file, and some settings are given throug arguments ex.:
 ```bash
-pyfa FA_file --print_fields --proj=EPSG:4326 --save
+pyfa -d  PFAR07+0001 # --> describe the content of a file
+pyfa -c --whitelist=CLSTEMPERATURE,CLSVENT.ZONAL --proj=EPSG:4326 PFAR*+000* # --> convert a FA-file, or a collection of them (by regex) to a netCDF file.
+pyfa -p --whitelist=CLSTEMPERATURE --proj=EPSG:4326 PFAR07+0002 vmin=294 cmap='viridis' # --> 2D plot of (reprojected) field with **kwargs passed to the plot.
 ```
-
 To see all possible arguements run `pyfa -h`. (Don't forget to setup the shell commands first)
 
 

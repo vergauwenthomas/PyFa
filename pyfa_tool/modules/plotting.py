@@ -33,46 +33,38 @@ import matplotlib.pyplot as plt
 # Figure creator
 # =============================================================================
 
+def make_regular_fig():
 
-def make_fig():
+    fig, ax = plt.subplots()
+    return fig, ax
+
+def make_platcarree_fig():
+    """ Create figure and axes in PlateCarree (only if data in latlon) """
     fig, ax = plt.subplots(subplot_kw={'projection':ccrs.PlateCarree()})
     return fig, ax
-    
+
 
 # # =============================================================================
 # Plotting functions
 # =============================================================================
 
 
-def make_plot(dxr, ax,title=None, grid=False, land=True, coastline=True, contour=False, legend=True, levels=10, **kwargs):
+def make_plot(dxr, ax,title=None, grid=False, land=True, coastline=True, contour=False, levels=10, **kwargs):
     if contour:
-        dxr.plot.contourf(ax=ax, add_colorbar=legend,
-                               levels=levels,  **kwargs)
+        dxr.plot.contourf(ax=ax, levels=levels,  **kwargs)
 
     else:
         dxr.plot(ax=ax, **kwargs)
-
     if land:
         ax.add_feature(cfeature.LAND)
         ax.add_feature(cfeature.BORDERS)
     if coastline:
         ax.add_feature(cfeature.COASTLINE)
-    
     if grid:
         ax.gridlines(draw_labels=True, dms=True, x_inline=False, y_inline=False)
-    
-    if isinstance(title, type(None)):
-        title=f'{dxr.attrs["name"].rstrip()} at {dxr.attrs["validate"]} (UTC, LT={dxr.attrs["leadtime"]}h)'
-    
     ax.set_title(title)
-    
+
     return ax
-
-
-
-
-
-
 
 
 
@@ -81,15 +73,15 @@ def make_plot(dxr, ax,title=None, grid=False, land=True, coastline=True, contour
 # =============================================================================
 
 def save_plot(fig, filepath, fmt='png'):
-    
+
     # Check if filepath and fmt are compatible
     assert filepath[-len(fmt):] == fmt, f'{filepath} not compatible with format: {fmt}'
-    
-    fig.savefig(filepath)
-    
-    return 
 
-    
+    fig.savefig(filepath)
+
+    return
+
+
 
 
 
