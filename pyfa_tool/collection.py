@@ -41,11 +41,21 @@ class FaCollection():
     # =========================================================================
     def __repr__(self):
         """String representation."""
-        return str(self.ds)
+        if self.ds is not None:
+            return f'FaCollection with a combined Dataset: \n {self.ds}'
+        if bool(self.FaDatasets):
+            return f'FaCollection that holds {len(self.FaDatasets)} FaDatasets, not yet been combined.'
+        return 'empty instance of a FaCollection.'
+
 
     def __str__(self):
         """String typecaste representation."""
-        return str(self.ds)
+        if self.ds is not None:
+            return f'FaCollection with a combined Dataset: \n {self.ds}'
+        if bool(self.FaDatasets):
+            return f'FaCollection that holds {len(self.FaDatasets)} FaDatasets, not yet been combined.'
+        return 'empty instance of a FaCollection.'
+
 
     # =============================================================================
     # Getters/setters
@@ -202,6 +212,46 @@ class FaCollection():
         self.ds = ds
         self._clean()
         self.ds.attrs.update(specific_comb_attributes)
+
+
+
+
+    def save_nc(self, outputfolder, filename, overwrite=False, **kwargs):
+        """
+        Save the xarray.Dataset as a netCDF file.
+
+
+        Parameters
+        ----------
+        outputfolder : str
+            Path to the folder to write the netCDF file to.
+        filename : str
+            Name of the netCDF file.
+        overwrite : bool, optional
+            If the path of the target netCDF file exist, an error will be
+            thrown unles overwrite is True. Then the file will be overwritten.
+            The default is False.
+        **kwargs : kwargs
+            Kwargs will be passed to the xarray.to_netcdf() method.
+
+        Returns
+        -------
+        None.
+
+        """
+        assert not (self.ds is None), 'No collection xarray.Dataset'
+
+        self._clean()
+        saveds = self.ds
+
+        IO.save_as_nc(xrdata=saveds,
+                      outputfolder=outputfolder,
+                      filename=filename,
+                      overwrite=overwrite,
+                      **kwargs)
+
+
+
 
     def _clean(self):
         """Force a specific data format."""
