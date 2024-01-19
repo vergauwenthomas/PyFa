@@ -11,9 +11,11 @@ import os
 import sys
 import shutil
 import argparse
+from pathlib import Path
 
-main_path = os.path.dirname(__file__)
-sys.path.append(main_path)
+main_path = Path(__file__).parents[1].resolve()
+sys.path.append(str(main_path))
+
 
 
 if __name__ == "__main__":
