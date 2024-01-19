@@ -12,6 +12,7 @@ from collections.abc import Iterable
 import subprocess
 import pandas as pd
 import xarray as xr
+import rioxarray #Do not remove this import!
 
 
 import pyfa_tool.modules.IO as IO
