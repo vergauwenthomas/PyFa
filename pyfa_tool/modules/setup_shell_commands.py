@@ -27,5 +27,5 @@ else:
     file1.write('alias pyfa="source ${PYFA_BASH} "$@""')
     file1.close()
 
-    print('Done! pyfa is now a shell command.')
+    print('Done! pyfa is now a shell command. (Source your .bashrc first, or open a new terminal.)')
     print('Try it out: pyfa -h')
