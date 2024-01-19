@@ -100,8 +100,13 @@ def describe_fa_from_json(metadata, fieldslist,
     # formatting datetimes
     validdate = _str_to_dt(d['validate'][0])
     basedate = _str_to_dt(d['basedate'][0])
-    timestep = timedelta(seconds=int(d['timestep'][0]))
-
+    if d['timestep'][0] == '':
+        #For init files
+        timestep = timedelta(seconds=0)
+        time_iter = 'No itegration'
+    else:
+        timestep = timedelta(seconds=int(d['timestep'][0]))
+        time_iter = int((validdate - basedate)/timestep)
     print(
     f'''
 ### File format : FA
@@ -118,7 +123,7 @@ Basedate               : {basedate}
 Leadtime               : {validdate - basedate}
 
 Timestep               : {timestep}
-N time iterations      : {int((validdate - basedate)/timestep)}
+N time iterations      : {time_iter}
 
 
 #######################
