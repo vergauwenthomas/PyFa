@@ -186,6 +186,7 @@ The following functionality is available:
     # =============================================================================
     if args.describe:
         if is_fafile:
+            fa_file = os.path.join(os.getcwd(), fa_file)
             FA = pyfa.FaFile(fa_file)
             FA.describe()
         else:
