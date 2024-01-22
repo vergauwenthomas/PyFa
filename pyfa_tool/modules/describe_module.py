@@ -103,7 +103,7 @@ def describe_fa_from_json(metadata, fieldslist,
     if d['timestep'][0] == '':
         #For init files
         timestep = timedelta(seconds=0)
-        time_iter = 'No itegration'
+        time_iter = 'No time integration'
     else:
         timestep = timedelta(seconds=int(d['timestep'][0]))
         time_iter = int((validdate - basedate)/timestep)
