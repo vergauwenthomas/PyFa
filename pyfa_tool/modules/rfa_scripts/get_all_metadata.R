@@ -47,7 +47,7 @@ sink()
 
 #Extract all fieldnames
 fieldnames = x$list$name
-dummy_field = fieldnames[1]
+dummy_field = avail_fields$name[avail_fields$length == max(avail_fields$length)][1]
 
 y = FAdec(x, dummy_field)
 
