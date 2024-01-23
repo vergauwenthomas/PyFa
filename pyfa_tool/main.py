@@ -80,7 +80,9 @@ The following functionality is available:
     import pyfa_tool as pyfa
     # from pyfa_tool.modules import plotting
     import matplotlib.pyplot as plt
+    import numpy as np
     from pathlib import Path
+
 
     # =============================================================================
     # Check arguments
@@ -177,6 +179,8 @@ The following functionality is available:
             assert pyfa.modules.IO.check_file_exist(fa_file), f'{file_expr} not found.' #Overkill?
 
 
+    if np.array(['whitelist' in faP for faP in matching_paths]).any():
+        print("WARNING: could it be that you added a whitelist without the '--' prefix?")
 
 
     # =============================================================================
