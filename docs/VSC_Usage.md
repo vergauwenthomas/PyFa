@@ -12,7 +12,7 @@ echo R_LIBS=/dodrio/scratch/projects/starting_2022_075/accord/software/R-libs >>
 #### Load environment
 Load the correct environments.
 ```bash
-./dodrio/scratch/projects/starting_2022_075/Software/PyFa/PyFa/docs/pyfa_on_vsc_setup.sh
+source /dodrio/scratch/projects/starting_2022_075/Software/PyFa/PyFa/docs/pyfa_on_vsc_setup.sh
 ```
 #### Add PyFa to your .bashrc
 ```bash
