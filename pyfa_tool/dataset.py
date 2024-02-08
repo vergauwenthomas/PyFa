@@ -514,12 +514,19 @@ class FaDataset():
         """
         assert not (self.ds is None), 'Empty instance of FaDataset.'
 
+        #to make shure itereative reprojection is possible
+        if 'lat' in self.ds.coords:
+            self.ds = self.ds.rename({'lat': 'y'})
+        if 'lon' in self.ds.coords:
+            self.ds = self.ds.rename({'lon': 'x'})
+
+
+
         ds = geospatial_func.reproject(dataset=self.ds,
                                        target_epsg=target_epsg,
                                        nodata=self.nodata)
 
-        if 'level' in self.ds.coords:
-            ds = ds.assign_coords({"level": self.ds.coords['level'].data})
+
 
         #Time dimensions are not projected, and are removed by rio, so
         # add these dimesions back to te reprojected dataset
@@ -527,6 +534,11 @@ class FaDataset():
             ds = ds.assign_coords({'validate': self.ds.coords['validate'].data})
         if 'basedate' not in ds.dims:
             ds = ds.assign_coords({'basedate': self.ds.coords['basedate'].data})
+
+        if target_epsg=='EPSG:4326':
+            ds = ds.rename({'x': 'lon', 'y': 'lat'})
+
+
 
         self.ds = ds
         self._clean()
