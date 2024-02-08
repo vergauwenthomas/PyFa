@@ -312,7 +312,7 @@ class FaDataset():
                       jsonpath=Rfa_attr_json,
                       force=True)
 
-        # Run Rscript to generete json files with data and meta info
+        # Run Rscript to generete a nc file with data and meta info
         r_script = os.path.join(package_path, 'modules',
                                 'rfa_scripts', 'get_all_fields.R')
 
@@ -324,12 +324,12 @@ class FaDataset():
 
         _ = convert_fa.wait()  # wait until finished before continuing
 
-        # read in the json file
-        jsonfile = os.path.join(tmpdir, "FA.json")
+        # read in the netCDF4 file
+        ncfile = os.path.join(tmpdir, "FA.nc")
 
         # Convert to a xarray dataset
-        ds = reading_fa.json_to_full_dataset(jsonfile)
 
+        ds = reading_fa.read_and_format_nc(ncfile)
         if rm_tmpdir:
             IO.remove_tempdir(tmpdir)
 
@@ -640,47 +640,54 @@ class FaDataset():
     # =============================================================================
     # Helpers
     # =============================================================================
-    def _format_pseudo_3d_fields(self):
-        """
-        Convert 2d representation of pseudo 3D fields to 3D fields.
+    # def _format_pseudo_3d_fields(self):
+    #     """
+    #     Convert 2d representation of pseudo 3D fields to 3D fields.
 
-        By default pseudo-3D fields are read as multiple 2D fields. This method
-        will combine all levels of pseudo fields and convert them into a 3D
-        field.
+    #     By default pseudo-3D fields are read as multiple 2D fields. This method
+    #     will combine all levels of pseudo fields and convert them into a 3D
+    #     field.
 
-        The level coordinate is set by using the variable name
+    #     The level coordinate is set by using the variable name
 
-        The 2D representations of the pseudo 3d fields are removed from the ds
-        attribute.
+    #     The 2D representations of the pseudo 3d fields are removed from the ds
+    #     attribute.
 
-        Returns
-        -------
-        None.
+    #     Returns
+    #     -------
+    #     None.
 
-        """
-        ds = self.ds
+    #     """
+    #     ds = self.ds
 
-        # get a list of all variable that are pseudofields
-        all_variables = [var for var in ds.variables if var not in ds.dims]
-        pseudo_vars = [var for var in all_variables if (var.startswith('S') & var[1:3].isnumeric())]
-        pseudo_basenames = list(set([var[4:].strip() for var in pseudo_vars]))
+    #     # get a list of all variable that are pseudofields
+    #     all_variables = [var for var in ds.variables if var not in ds.dims]
+    #     pseudo_vars = [var for var in all_variables if (var.startswith('S') & var[1:3].isnumeric())]
+    #     pseudo_basenames = list(set([var[4:].strip() for var in pseudo_vars]))
 
-        for basename in pseudo_basenames:
-            # If basename already present than skip (we assume that the basename
-            # contains all the data)
-            if basename in all_variables:
-                print(f'WARNING: {basename} is already a field and will not be the target of pseudo fields.')
-                continue
+    #     for basename in pseudo_basenames:
+    #         print(basename)
+    #         # If basename already present than skip (we assume that the basename
+    #         # contains all the data)
+    #         if basename in all_variables:
+    #             print(f'WARNING: {basename} is already a field and will not be the target of pseudo fields.')
+    #             continue
 
-            # get all pseudovars for this basename
-            cur_pseudo_vars = [var for var in pseudo_vars if var[4:].strip() == basename]
-            cur_levels = [int(var[1:4]) for var in cur_pseudo_vars]
+    #         # get all pseudovars for this basename
+    #         cur_pseudo_vars = [var for var in pseudo_vars if var[4:].strip() == basename]
+    #         cur_levels = [int(var[1:4]) for var in cur_pseudo_vars]
 
-            ds[basename] = xr.concat([ds[var] for var in cur_pseudo_vars],
-                             pd.Index(cur_levels, name='level'))
+    #         #assign coordinates to the level dimension
+    #         coorddict = dict(zip(cur_pseudo_vars, cur_levels))
+    #         for pseudo_var, lvl in coorddict.items():
+    #             ds[pseudo_var] = ds[pseudo_var].assign_coords({'level': [lvl]})
 
-            ds = ds.drop_vars(cur_pseudo_vars, errors='ignore')
-        self.ds = ds
+
+    #         ds[basename] = xr.concat([ds[var] for var in cur_pseudo_vars],
+    #                          pd.Index(cur_levels, name='level'))
+
+    #         ds = ds.drop_vars(cur_pseudo_vars, errors='ignore')
+    #     self.ds = ds
 
     def _set_time_dimensions(self):
         """
@@ -724,9 +731,9 @@ class FaDataset():
         # make sure the validate and basedate are dimensions with coordinates
         self._set_time_dimensions()
         # Convert pseudo 3d fields to 3d fields
-        self._format_pseudo_3d_fields()
+        # self._format_pseudo_3d_fields()
         # Fix dimension order
-        self.ds = self.ds.transpose('y', 'x', 'level', 'validate', 'basedate')
+        # self.ds = self.ds.transpose('y', 'x', 'level', 'validate', 'basedate')
 
 
     def field_exist(self, fieldname):
@@ -769,9 +776,11 @@ class FaDataset():
 
     def _get_physical_variables(self):
         blacklist=['spatial_ref']
-        dims = list(self.ds.dims)
+
         var_list = [var for var in list(self.ds.variables) if var not in blacklist]
-        var_list = [var for var in var_list if var not in dims]
+        var_list = [var for var in var_list if var not in list(self.ds.dims)]
+        var_list = [var for var in var_list if var not in list(self.ds.coords)]
+
         return var_list
 
 

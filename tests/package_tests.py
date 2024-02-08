@@ -84,10 +84,10 @@ data.import_2d_field(fieldname=fieldname,
                      reproj=False)
 
 
-assert set(data.ds.dims) == set(['x','y', 'basedate', 'validate', 'level']), 'dimensions not correct'
+assert set(data.ds.dims) == set(['xdim','ydim', 'basedate', 'validate']), 'dimensions not correct'
 assert data._get_physical_variables() == [fieldname], 'Something wrong with data variables'
 assert int(data.ds[fieldname].min()) == -5, 'Something wrong with data values'
-assert data.ds[fieldname].dims == ('y', 'x'), 'dimension order not correct'
+assert data.ds[fieldname].dims == ('ydim', 'xdim'), 'dimension order not correct'
 
 # =============================================================================
 # Test 3D import (NWP file)
@@ -100,8 +100,9 @@ fieldname = 'WIND.U.PHYS'
 data.import_3d_field(fieldname=fieldname,
                      reproj=False)
 
-assert set(data.ds.dims) == set(['x','y', 'basedate', 'validate', 'level']), 'dimensions not correct'
-assert set(data.ds[fieldname].dims) == set(['level', 'y', 'x']), 'dimensions of 3d field not correct'
+assert set(data.ds.dims) == set(['xdim','ydim','zdim', 'basedate', 'validate']), 'dimensions not correct'
+assert 'lvl' in data.ds.variables, 'lvl not in the coordinates'
+assert set(data.ds[fieldname].dims) == set(['zdim', 'ydim', 'xdim']), 'dimensions of 3d field not correct'
 assert data._get_physical_variables() == [fieldname], 'Something wrong with data variables'
 assert int(data.ds[fieldname].min()) == -11, 'Something wrong with data values'
 

@@ -41,16 +41,34 @@ def reproject(dataset, target_epsg='EPSG:4326', nodata=-999):
     # I am not a fan of -999 as nodata, but it must be a value that
     # can be typecast to integer (rasterio thing?)
 
-    ds = dataset.transpose('level', 'validate', 'basedate', 'y', 'x')
+    if 'spatial_ref' in list(dataset.variables):
+        dataset = dataset.drop_vars('spatial_ref')
 
-    for fieldname in list(ds.variables):
-        if fieldname not in ds.dims:
-            # only applicable on xarray, not on dataset
-            ds[fieldname].rio.write_nodata(nodata, inplace=True)
 
-    # ds.rio.write_nodata(np.nan, inplace=True)
-    ds = ds.rio.reproject(target_epsg, nodata=nodata)
 
+
+    #dimensions and coordinate must have the same name
+    # for rioxarray !!!!!!!!
+
+    dataset = dataset.rename({'xdim': 'x', 'ydim': 'y'})
+    dataset = dataset.rio.set_spatial_dims('x', 'y')
+
+    #rasterio requires y, x as last dims
+    if 'zdim' in dataset.dims:
+        dataset = dataset.transpose('validate', 'basedate','zdim', 'y', 'x')
+    else:
+        dataset = dataset.transpose('validate', 'basedate', 'y', 'x')
+
+
+    dataset = dataset.rio.write_crs(dataset.attrs['proj4str'])
+    dataset = dataset.rio.reproject(target_epsg, nodata=nodata)
+
+    #cleanup
     # remove no data
-    ds = ds.where(ds != nodata)
-    return ds
+    dataset = dataset.where(dataset != nodata)
+
+    if 'spatial_ref' in list(dataset.variables):
+        dataset = dataset.drop_vars('spatial_ref')
+
+    dataset = dataset.rename({'x': 'lon', 'y': 'lat'})
+    return dataset
