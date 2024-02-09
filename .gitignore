@@ -8,6 +8,10 @@ poetry.lock
 *.ipynb_checkpoints*
 
 examples/*.nc
+examples/*.py #these are just py copies of the ipynb
+buildscripts/*_log
+
+
 tests/data/*
 
 *.png

@@ -5,7 +5,7 @@ Created on Wed Jan 10 09:07:27 2024
 
 @author: thoverga
 """
-
+from pyproj import CRS
 
 def reproject(dataset, target_epsg='EPSG:4326', nodata=-999):
     """
@@ -41,16 +41,36 @@ def reproject(dataset, target_epsg='EPSG:4326', nodata=-999):
     # I am not a fan of -999 as nodata, but it must be a value that
     # can be typecast to integer (rasterio thing?)
 
-    ds = dataset.transpose('level', 'validate', 'basedate', 'y', 'x')
+    if 'spatial_ref' in list(dataset.variables):
+        dataset = dataset.drop_vars('spatial_ref')
 
-    for fieldname in list(ds.variables):
-        if fieldname not in ds.dims:
-            # only applicable on xarray, not on dataset
-            ds[fieldname].rio.write_nodata(nodata, inplace=True)
 
-    # ds.rio.write_nodata(np.nan, inplace=True)
-    ds = ds.rio.reproject(target_epsg, nodata=nodata)
 
+
+    #dimensions and coordinate must have the same name
+    # for rioxarray !!!!!!!!
+
+    # dataset = dataset.rio.set_spatial_dims('x', 'y')
+
+
+    #rasterio requires y, x as last dims
+    if 'lvl' in dataset.dims:
+        dataset = dataset.transpose('validate', 'basedate','lvl', 'y', 'x')
+    else:
+        dataset = dataset.transpose('validate', 'basedate', 'y', 'x')
+
+
+    dataset = dataset.rio.write_crs(dataset.attrs['proj4str'])
+    dataset = dataset.rio.reproject(target_epsg, nodata=nodata)
+
+    #overwrite the current proj4 string
+    dataset.attrs['proj4str'] = CRS.from_string(target_epsg).to_proj4()
+
+    #cleanup
     # remove no data
-    ds = ds.where(ds != nodata)
-    return ds
+    dataset = dataset.where(dataset != nodata)
+
+    if 'spatial_ref' in list(dataset.variables):
+        dataset = dataset.drop_vars('spatial_ref')
+
+    return dataset

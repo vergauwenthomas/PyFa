@@ -1,6 +1,7 @@
 #!/usr/bin/env Rscript
 library(meteogrid)
 library(Rfa)
+library(ncdf4)
 
 
 library(data.table)
@@ -26,6 +27,9 @@ filename = args[1]
 outputdir = args[2]
 extra_attr_file = args[3]
 
+#filename='/home/thoverga/Documents/github/PyFa-tool/tests/data/PFAR07csm07+0002'
+#outputdir = '/home/thoverga/Documents/github/PyFa-tool/development/tmp_fajson'
+#extra_attr_file='/home/thoverga/Documents/github/PyFa-tool/development/tmp_fajson/Rfa_extra_attrs.json'
 
 # ---------------------------------------------
 # ------------ read special attributes -------------
@@ -36,6 +40,23 @@ d3_whitelist=extra_attrs$`3d_white`
 d2_blacklist=extra_attrs$`2d_black`
 d3_blacklist=extra_attrs$`3d_black`
 
+## ----------__DEBUG__------------------
+
+#d2_whitelist = c("PROFTEMPERATURE", "PROFRESERV.EAU", "PROFRESERV.GLACE",
+#                 "SURFRESERV.NEIGE", "SURFALBEDO NEIGE", "SURFDENSIT.NEIGE",
+#                 "SURFALBEDO HISTO", "SURFTEMPERATURE", 'S036HUMI.SPECIFI')
+#d3_whitelist = c("WIND.U.PHYS")
+#d2_blacklist=c()
+#d3_blacklist=c()
+
+## ---------END DEBUG --------------------
+
+# ---------------------------------------------
+# ------------ Create a target -------------
+#----------------------------------------------
+fillvalue <- 1e32
+var_precision='double'
+trg_file=file.path(outputdir, "FA.nc")
 
 # ---------------------------------------------
 # ------------ Get all fieldnames -------------
@@ -43,7 +64,7 @@ d3_blacklist=extra_attrs$`3d_black`
 
 # open file
 x = Rfa::FAopen(filename)
-data = copy(x)
+# data = copy(x)
 
 #Extract all fieldnames
 fieldnames = x$list$name
@@ -95,7 +116,7 @@ coords = DomainPoints(y, type="xy")
 ycoords = as.numeric(data.frame(coords[2])[12,]) #select an arbirary row
 xcoords = as.numeric(data.frame(coords[1])[,12]) #select an arbirary column
 
-toadd <- list('basedate'=toString(attr(y, "info")$time$basedate),
+attrs <- list('basedate'=toString(attr(y, "info")$time$basedate),
               'validate'=toString(attr(y, "info")$time$validdate),
               'leadtime'=toString(attr(y, "info")$time$leadtime),
               'timestep'=toString(attr(y, "info")$time$tstep),
@@ -137,17 +158,71 @@ toadd <- list('basedate'=toString(attr(y, "info")$time$basedate),
               'A_list'=attr(x, 'frame')$levels$A,
               'B_list'=attr(x, 'frame')$levels$B)
 
-data['pyfa_metadata'] = list(toadd)
+
+
+# ---------------------------------------------
+# ------------Define dimension -------------
+#----------------------------------------------
+xdim <<- ncdim_def(name="xdim", units="see_proj",vals=as.double(xcoords))
+ydim <<- ncdim_def(name="ydim",units="see_proj",vals=as.double(ycoords))
+zdim <<- ncdim_def(name="zdim",units="level",vals=seq(1, attr(x,  'frame')$nlev, by=1))
+
+nxdim <<- length(xcoords)
+nydim <<- length(ycoords)
+nlev <<- attr(x,  'frame')$nlev
+# ---------------------------------------------
+# ------------ Constructor functions -------------
+#----------------------------------------------
+make_2d_nc_variable <- function(geofieldname) {
+  return(ncvar_def(name=geofieldname,
+                  units="_undef",
+                  dim=list(xdim,ydim),
+                  missval=fillvalue,
+                  longname="",
+                  prec=var_precision))
+}
+
+make_2d_array <- function(geofield) {
+  return(array(as.vector(geofield),
+                   dim=c(nxdim,nydim)))
+  
+}
+
+make_3d_nc_variable <- function(geofieldbasename) {
+  return(ncvar_def(name=geofieldbasename,
+                  units="_undef",
+                  dim=list(xdim,ydim, zdim),
+                  missval=fillvalue,
+                  longname="",
+                  prec=var_precision))
+}
+
+make_3d_array <- function(geofield) {
+  #write data
+  # toadd <- list('data'=array(y, dim=c(nx, ny, nlev)),
+  #               'type'='3d')
+  
+  return(array(as.vector(geofield),
+                   dim=c(nxdim,nydim, nlev)))
+}
+
 
 # ---------------------------------------------
 # ------------ Collect data -------------
 #----------------------------------------------
 
 
+nc_vars_to_add = list() #stores all variable metadata
+nc_data_to_add = list() #stores data
+nc_vars_attr_to_add = list() #stores attribute specific to a field
+
+
+
 #Loop over all 2d fields
 for (fieldname in fieldnames2D) {
-  if (trimws(fieldname) %in% d2_whitelist){
-    if (trimws(fieldname) %in% d2_blacklist){
+  fieldname = trimws(fieldname)
+  if (fieldname %in% d2_whitelist){
+    if (fieldname %in% d2_blacklist){
       print(paste0(fieldname, ' rejected by blacklist'))
     }else{
       tryCatch(
@@ -155,8 +230,11 @@ for (fieldname in fieldnames2D) {
         {
           print(paste0(fieldname, ' reading ...'))
           y = FAdec(x, fieldname)
-          toadd <- list('data'=array(y[]), 'type'='2d')
-          data[fieldname] = list(toadd)
+
+          nc_vars_to_add[[fieldname]] = make_2d_nc_variable(fieldname)
+          nc_data_to_add[[fieldname]] = make_2d_array(y)
+          nc_vars_attr_to_add[[fieldname]] = list('type'="2d")
+
 
         },
         #if an error occurs, tell me the error
@@ -174,8 +252,9 @@ for (fieldname in fieldnames2D) {
 
 #Loop over all pseudo 3D fields
 for (fieldname in fieldnames_pseudo3D) {
-  if (trimws(fieldname) %in% d2_whitelist){ #Keep in mind pseudo 3D whitelist are interpreted as 2d whitelist
-    if (trimws(fieldname) %in% d2_blacklist){  #Keep in mind pseudo 3D blacklist are interpreted as 2d whitelist
+  fieldname = trimws(fieldname)
+  if (fieldname %in% d2_whitelist){ #Keep in mind pseudo 3D whitelist are interpreted as 2d whitelist
+    if (fieldname %in% d2_blacklist){  #Keep in mind pseudo 3D blacklist are interpreted as 2d whitelist
       print(paste0(fieldname, ' (pseudo3D) rejected by blacklist'))
     }else{
       tryCatch(
@@ -183,8 +262,9 @@ for (fieldname in fieldnames_pseudo3D) {
         {
           print(paste0(fieldname, ' (pseudo3D) reading ...'))
           y = FAdec(x, fieldname)
-          toadd <- list('data'=array(y[]), 'type'='pseudo_3d')
-          data[fieldname] = list(toadd)
+          nc_vars_to_add[[fieldname]] = make_2d_nc_variable(fieldname)
+          nc_data_to_add[[fieldname]] = make_2d_array(y)
+          nc_vars_attr_to_add[[fieldname]] = list('type'="pseudo_3d")
 
         },
         #if an error occurs, tell me the error
@@ -202,8 +282,9 @@ for (fieldname in fieldnames_pseudo3D) {
 
 #Loop over specific whitelist fields that are levels of 3d fields
 for (fieldname in specific_2d) {
-  if (trimws(fieldname) %in% d2_whitelist){ #Keep in mind pseudo 3D whitelist are interpreted as 2d whitelist
-    if (trimws(fieldname) %in% d2_blacklist){  #Keep in mind pseudo 3D blacklist are interpreted as 2d whitelist
+  fieldname = trimws(fieldname)
+  if (fieldname %in% d2_whitelist){ #Keep in mind pseudo 3D whitelist are interpreted as 2d whitelist
+    if (fieldname %in% d2_blacklist){  #Keep in mind pseudo 3D blacklist are interpreted as 2d whitelist
       print(paste0(fieldname, ' (Specific level of 3D) rejected by blacklist'))
     }else{
       tryCatch(
@@ -211,8 +292,11 @@ for (fieldname in specific_2d) {
         {
           print(paste0(fieldname, ' (Specific level of 3D) reading ...'))
           y = FAdec(x, fieldname)
-          toadd <- list('data'=array(y[]), 'type'='pseudo_3d')
-          data[fieldname] = list(toadd)
+          nc_vars_to_add[[fieldname]] = make_2d_nc_variable(fieldname)
+          nc_data_to_add[[fieldname]] = make_2d_array(y)
+          nc_vars_attr_to_add[[fieldname]] = list('type'="pseudo_3d")
+          # toadd <- list('data'=array(y[]), 'type'='pseudo_3d')
+          # data[fieldname] = list(toadd)
 
         },
         #if an error occurs, tell me the error
@@ -230,8 +314,9 @@ for (fieldname in specific_2d) {
 #loop over all 3d basename fields
 
 for (basename in basenames3D) {
-  if (trimws(basename) %in% d3_whitelist){
-    if (trimws(basename) %in% d3_blacklist){
+  basename = trimws(basename)
+  if (basename %in% d3_whitelist){
+    if (basename %in% d3_blacklist){
       print(paste0(basename, ' rejected by blacklist'))
     }else{
       tryCatch(
@@ -239,14 +324,11 @@ for (basename in basenames3D) {
         {
           print(paste0(basename, ' reading ...'))
           y = FAdec3d(x, par=basename, plevels.out = NULL)
-          # Specific 3dfield data attr
-          nx = attr(y, "domain")$nx
-          ny = attr(y, "domain")$ny
-          nlev=attr(x,  'frame')$nlev
-          #write data
-          toadd <- list('data'=array(y, dim=c(nx, ny, nlev)),
-                        'type'='3d')
-          data[basename] = list(toadd)
+
+          nc_vars_to_add[[basename]] = make_3d_nc_variable(basename)
+          nc_data_to_add[[basename]] = make_3d_array(y)
+          nc_vars_attr_to_add[[basename]] = list('type'="3d")
+
         },
         #if an error occurs, tell me the error
         error=function(e) {
@@ -261,7 +343,57 @@ for (basename in basenames3D) {
 }
 
 
-# write to json
-exportJSON <- toJSON(data)
-write(exportJSON, file.path(outputdir, "FA.json"))
+
+#-------- Construct the netcdf ------------------
+# create netCDF file and put arrays
+ncout <- nc_create(filename=trg_file,
+                   vars=nc_vars_to_add,
+                   force_v4=TRUE)
+#add variables
+for (name in names(nc_data_to_add)) {
+  print(name)
+  ncvar_put(nc=ncout, varid=name,
+            vals=nc_data_to_add[[name]],
+            na_replace='fast')
+}
+ncatt_put(nc=ncout, varid=0, attname="fillvalue", attval=fillvalue)
+# nc_close(ncout)
+# put additional attributes into dimension and data variables (specified by varid)
+ncatt_put(nc=ncout,
+          varid="xdim", #point to name already in the nc vars/dims
+          attname="axis",
+          attval="X") #,verbose=FALSE) #,definemode=FALSE)
+ncatt_put(nc=ncout,
+          varid="ydim", #point to name already in the nc vars/dims
+          attname="axis",
+          attval="Y") #,verbose=FALSE) #,definemode=FALSE)
+
+
+#add attributes specific to the fields
+for (name in names(nc_vars_attr_to_add)) {
+  for (key in names(nc_vars_attr_to_add[[name]])){
+    ncatt_put(nc=ncout,
+              varid=name, #point to name already in the nc vars/dims
+              attname=key,
+              attval=nc_vars_attr_to_add[[name]][[key]]) #,verbose=FALSE) #,definemode=FALSE)
+  }
+}
+
+# add global attributes (because varid == 0 --> makes this attribute global for the nc)
+#add attributes specific to the fields
+for (name in names(attrs)) {
+
+    ncatt_put(nc=ncout,
+              varid=0,
+              attname=name,
+              attval=attrs[[name]]) #,verbose=FALSE) #,definemode=FALSE)
+}
+ncatt_put(nc=ncout, varid=0, attname="var_presision", attval=var_precision)
+ncatt_put(nc=ncout, varid=0, attname="fillvalue", attval=fillvalue)
+# Get a summary of the created file:
+#ncout
+
+# close the file, writing data to disk
+nc_close(ncout)
+
 

@@ -8,7 +8,8 @@ cd .. #Navigate to workdir
 
 WORKDIR=$(pwd)
 DISTDIR=${WORKDIR}/dist
-TESTDIR=${WORKDIR}/tests 
+TESTDIR=${WORKDIR}/tests
+EXAMPLESDIR=${WORKDIR}/examples
 #1 execute tests before building the package
 
 
@@ -16,8 +17,8 @@ TESTDIR=${WORKDIR}/tests
 
 #2 install the package using poetry
 
-poetry update #to update the poetry.lock with the latest versions of the depending packages 
-poetry install 
+poetry update #to update the poetry.lock with the latest versions of the depending packages
+poetry install
 
 poetry show
 
@@ -45,14 +46,60 @@ poetry build
 #poetry add rioxarray
 
 
+#make logfile for each test and stream  prompt output for the test
+make_test_log () {
+	testfile="$1"
+	specificlogfile="${DEPLOY_DIR}/${testfile::-3}_log"
+	rm -f ${specificlogfile}
+	touch ${specificlogfile}
+	echo "$specificlogfile"
+}
 
 
 
-#Run tests in package space
+echo 'Running the documentation examples as test'
+cd ${EXAMPLESDIR}
 
+#delete all .py versions of the examples (rebuild them from the notebooks)
+rm ${EXAMPLESDIR}/*.py
+#convert nb to python files
+jupyter nbconvert --to python *.ipynb
+
+cd ${EXAMPLESDIR}
+filenames=`ls ./*.py`
+for t in $filenames; do
+	example_file=${EXAMPLESDIR}/${t}
+	logfile="$(make_test_log ${t})"
+	echo Running ${t} as a test
+	poetry run python ${example_file} >> ${logfile} 2>&1
+	if [ $? -eq 0 ]; then
+   		echo "succeeded !!"
+	else
+    		echo "FAIL!!"
+	fi
+
+done
+
+
+
+
+
+
+echo 'Running the tests'
 cd ${TESTDIR}
+filenames=`ls ./*.py`
+for t in $filenames; do
+	example_file=${TESTDIR}/${t}
+	logfile="$(make_test_log ${t})"
+	echo Running ${t} as a test
+	poetry run python ${example_file} >> ${logfile} 2>&1
+	if [ $? -eq 0 ]; then
+   		echo "succeeded !!"
+	else
+    		echo "FAIL!!"
+	fi
 
-poetry run python package_tests.py
+done
 
 
 

@@ -4,8 +4,9 @@ Python wrapper on Rfa using [Xarray](https://docs.xarray.dev/en/stable/). The go
 
 ## Required software and install
 
-This package is developed for Linux distributions with a Python3 installation. In addition, R should be installed and the [Rfa](https://github.com/harphub/Rfa) library as well.
-
+This package is developed for Linux distributions with a Python3 installation. In addition, R should be installed with the following libraries:
+ * [Rfa](https://github.com/harphub/Rfa)
+ * [ncdf4](https://cran.r-project.org/web/packages/ncdf4/index.html)
 
 For the most stable versions use the github main, or use the version on [PyPI](https://pypi.org/project/PyFa-tool/). Install this with:
 ```bash

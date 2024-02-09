@@ -84,7 +84,7 @@ data.import_2d_field(fieldname=fieldname,
                      reproj=False)
 
 
-assert set(data.ds.dims) == set(['x','y', 'basedate', 'validate', 'level']), 'dimensions not correct'
+assert set(data.ds.dims) == set(['x','y', 'basedate', 'validate']), 'dimensions not correct'
 assert data._get_physical_variables() == [fieldname], 'Something wrong with data variables'
 assert int(data.ds[fieldname].min()) == -5, 'Something wrong with data values'
 assert data.ds[fieldname].dims == ('y', 'x'), 'dimension order not correct'
@@ -100,8 +100,9 @@ fieldname = 'WIND.U.PHYS'
 data.import_3d_field(fieldname=fieldname,
                      reproj=False)
 
-assert set(data.ds.dims) == set(['x','y', 'basedate', 'validate', 'level']), 'dimensions not correct'
-assert set(data.ds[fieldname].dims) == set(['level', 'y', 'x']), 'dimensions of 3d field not correct'
+assert set(data.ds.dims) == set(['x','y','lvl', 'basedate', 'validate']), 'dimensions not correct'
+assert 'lvl' in data.ds.variables, 'lvl not in the coordinates'
+assert set(data.ds[fieldname].dims) == set(['lvl', 'y', 'x']), 'dimensions of 3d field not correct'
 assert data._get_physical_variables() == [fieldname], 'Something wrong with data variables'
 assert int(data.ds[fieldname].min()) == -11, 'Something wrong with data values'
 
@@ -129,24 +130,44 @@ data.import_fa(
                reproj=False)
 
 
-assert set(data._get_physical_variables()) == set(['CLSTEMPERATURE','SURFACCPLUIE','RAYT SOL CL','WIND.U.PHYS','RAYT THER CL','TEMPERATURE']), 'Something wrong with data variables'
-assert set(data.ds.dims) == set(['x','y', 'basedate', 'validate', 'level']), 'dimensions not correct'
+assert set(data._get_physical_variables()) == set(['CLSTEMPERATURE','SURFACCPLUIE','S001RAYT SOL CL','S087RAYT SOL CL','S001RAYT THER CL','S004WIND.U.PHYS','S018TEMPERATURE','S032WIND.U.PHYS']), 'Something wrong with data variables'
+assert set(data.ds.dims) == set(['x','y', 'basedate', 'validate']), 'dimensions not correct'
 
-assert np.isnan(data.ds['WIND.U.PHYS'].sel(level=1).data).any() ,'2d field of 3dfield not read properly'
-assert not np.isnan(data.ds['WIND.U.PHYS'].sel(level=32).data).any() ,'2d field of 3dfield not read properly'
-assert not np.isnan(data.ds['WIND.U.PHYS'].sel(level=4).data).any() ,'2d field of 3dfield not read properly'
-assert np.isnan(data.ds['TEMPERATURE'].sel(level=1).data).any() ,'2d field of 3dfield not read properly'
-assert not np.isnan(data.ds['TEMPERATURE'].sel(level=18).data).any() ,'2d field of 3dfield not read properly'
 
-#Test pseudo fields
+# #Test pseudo fields
+# assert 'RAYT THER CL' in data.ds.variables, 'pseudo field not read properly'
+# assert 'RAYT SOL CL' in data.ds.variables, 'pseudo field not read properly'
+# assert not np.isnan(data.ds['RAYT SOL CL'].sel(level=1).data).any() ,'pseudo field not read properly'
+# assert not np.isnan(data.ds['RAYT SOL CL'].sel(level=87).data).any() ,'pseudo field not read properly'
+# assert np.isnan(data.ds['RAYT SOL CL'].sel(level=2).data).any() ,'pseudo field not read properly'
+# assert np.isnan(data.ds['RAYT THER CL'].sel(level=2).data).any() ,'pseudo field not read properly'
+# assert np.isnan(data.ds['RAYT THER CL'].sel(level=87).data).any() ,'pseudo field not read properly'
+# assert not np.isnan(data.ds['RAYT THER CL'].sel(level=1).data).any() ,'pseudo field not read properly'
+
+# =============================================================================
+# Test converting 2d crossections to 3d fields
+# =============================================================================
+
+data.convert_2d_crossections_to_3d_variables()
+
+
+
+assert np.isnan(data.ds['WIND.U.PHYS'].sel(lvl=1).data).any() ,'2d field of 3dfield not read properly'
+assert not np.isnan(data.ds['WIND.U.PHYS'].sel(lvl=32).data).any() ,'2d field of 3dfield not read properly'
+assert not np.isnan(data.ds['WIND.U.PHYS'].sel(lvl=4).data).any() ,'2d field of 3dfield not read properly'
+assert np.isnan(data.ds['TEMPERATURE'].sel(lvl=1).data).any() ,'2d field of 3dfield not read properly'
+assert not np.isnan(data.ds['TEMPERATURE'].sel(lvl=18).data).any() ,'2d field of 3dfield not read properly'
+
 assert 'RAYT THER CL' in data.ds.variables, 'pseudo field not read properly'
 assert 'RAYT SOL CL' in data.ds.variables, 'pseudo field not read properly'
-assert not np.isnan(data.ds['RAYT SOL CL'].sel(level=1).data).any() ,'pseudo field not read properly'
-assert not np.isnan(data.ds['RAYT SOL CL'].sel(level=87).data).any() ,'pseudo field not read properly'
-assert np.isnan(data.ds['RAYT SOL CL'].sel(level=2).data).any() ,'pseudo field not read properly'
-assert np.isnan(data.ds['RAYT THER CL'].sel(level=2).data).any() ,'pseudo field not read properly'
-assert np.isnan(data.ds['RAYT THER CL'].sel(level=87).data).any() ,'pseudo field not read properly'
-assert not np.isnan(data.ds['RAYT THER CL'].sel(level=1).data).any() ,'pseudo field not read properly'
+assert not np.isnan(data.ds['RAYT SOL CL'].sel(lvl=1).data).any() ,'pseudo field not read properly'
+assert not np.isnan(data.ds['RAYT SOL CL'].sel(lvl=87).data).any() ,'pseudo field not read properly'
+assert np.isnan(data.ds['RAYT SOL CL'].sel(lvl=2).data).any() ,'pseudo field not read properly'
+assert np.isnan(data.ds['RAYT THER CL'].sel(lvl=2).data).any() ,'pseudo field not read properly'
+assert np.isnan(data.ds['RAYT THER CL'].sel(lvl=87).data).any() ,'pseudo field not read properly'
+assert not np.isnan(data.ds['RAYT THER CL'].sel(lvl=1).data).any() ,'pseudo field not read properly'
+
+
 
 
 # =============================================================================
@@ -164,7 +185,12 @@ data.reproject(target_epsg='EPSG:4326')
 
 assert int(data.ds.coords['y'].max()) == 54 , 'something wrong with reprojecting'
 assert int(data.ds.coords['x'].max()) == 10, ' Something wrong with reprojecting'
-assert set(data.ds.dims) == set(['x','y', 'basedate', 'validate', 'level']), 'dimensions not correct'
+assert set(data.ds.dims) == set(['x','y', 'basedate', 'validate', 'lvl']), 'dimensions not correct'
+assert 'lon' in data.ds.coords, 'longitude coordinate not created'
+assert 'lat' in data.ds.coords, 'latitude coordinate not created'
+assert data.ds.attrs['proj4str'].startswith('+proj=longlat'), 'proj4 str not update'
+
+
 # =============================================================================
 # Test plot (NWP file)
 # =============================================================================
@@ -197,7 +223,7 @@ data2.read_nc(file=os.path.join(savefolder, savefile+'.nc'))
 assert int(data2.ds.coords['y'].max()) == 54 , '(read netCDF) something wrong with reprojecting '
 assert int(data2.ds.coords['x'].max()) == 10, '(read netCDF) Something wrong with reprojecting'
 assert set(data2._get_physical_variables()) == set(['CLSTEMPERATURE','SURFACCPLUIE','RAYT SOL CL','WIND.U.PHYS','RAYT THER CL','TEMPERATURE']), 'Something wrong with data variables'
-assert set(data2.ds.dims) == set(['x','y', 'basedate', 'validate', 'level']), 'dimensions not correct'
+assert set(data2.ds.dims) == set(['x','y', 'basedate', 'validate', 'lvl']), 'dimensions not correct'
 
 
 
@@ -217,7 +243,7 @@ data.import_2d_field(fieldname=fieldname,
 assert data._get_physical_variables() == [fieldname], 'Something wrong with data variables'
 assert int(data.ds[fieldname].min()) == -21, 'Something wrong with data values'
 assert set(data.ds[fieldname].dims) == set(['y', 'x']), 'dimension of 2d field not correct'
-assert set(data.ds.dims) == set(['x','y', 'basedate', 'validate', 'level']), 'dimensions not correct'
+assert set(data.ds.dims) == set(['x','y', 'basedate', 'validate']), 'dimensions not correct'
 
 # =============================================================================
 # Test 3D import (climate file)
@@ -229,10 +255,10 @@ fieldname = 'WIND.U.PHYS'
 
 data.import_3d_field(fieldname=fieldname,
                      reproj=False)
-assert set(data.ds[fieldname].dims) == set(['level', 'y', 'x']), 'dimension of 3d not correct'
+assert set(data.ds[fieldname].dims) == set(['lvl', 'y', 'x']), 'dimension of 3d not correct'
 assert data._get_physical_variables() == [fieldname], 'Something wrong with data variables'
 assert int(data.ds[fieldname].min()) == -35, 'Something wrong with data values'
-assert set(data.ds.dims) == set(['x','y', 'basedate', 'validate', 'level']), 'dimensions not correct'
+assert set(data.ds.dims) == set(['x','y', 'basedate', 'validate', 'lvl']), 'dimensions not correct'
 
 # =============================================================================
 # Test whitelist/blacklist multi import (climate file)
@@ -251,7 +277,7 @@ data.import_fa(
 
 
 assert set(data._get_physical_variables()) == set(['CLSTEMPERATURE', "SURFAEROS.LAND"]), 'Something wrong with data variables'
-assert set(data.ds.dims) == set(['x','y', 'basedate', 'validate', 'level']), 'dimensions not correct'
+assert set(data.ds.dims) == set(['x','y', 'basedate', 'validate']), 'dimensions not correct'
 # =============================================================================
 # Test describe (climate file)
 # =============================================================================
@@ -267,7 +293,7 @@ data.reproject(target_epsg='EPSG:4326')
 
 assert int(data.ds.coords['y'].max()) == 75 , 'something wrong with reprojecting'
 assert int(data.ds.coords['x'].max()) == 79, ' Something wrong with reprojecting'
-assert set(data.ds.dims) == set(['x','y', 'basedate', 'validate', 'level']), 'dimensions not correct'
+assert set(data.ds.dims) == set(['x','y', 'basedate', 'validate']), 'dimensions not correct'
 # =============================================================================
 # Test plot (climate file)
 # =============================================================================
@@ -300,7 +326,7 @@ data2.read_nc(file=os.path.join(savefolder, savefile+'.nc'))
 assert int(data2.ds.coords['y'].max()) == 75 , '(read netCDF) something wrong with reprojecting '
 assert int(data2.ds.coords['x'].max()) == 79, '(read netCDF) Something wrong with reprojecting'
 assert set(data2._get_physical_variables()) == set(['CLSTEMPERATURE', "SURFAEROS.LAND"]), 'Something wrong with data variables'
-assert set(data2.ds.dims) == set(['x','y', 'basedate', 'validate', 'level']), 'read netCDF dimensions not correct'
+assert set(data2.ds.dims) == set(['x','y', 'basedate', 'validate']), 'read netCDF dimensions not correct'
 
 
 

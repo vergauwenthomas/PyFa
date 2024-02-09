@@ -263,7 +263,7 @@ class FaCollection():
     def _clean(self):
         """Force a specific data format."""
         # store the y and x coordiantes as last, so GIS programs project them correct
-        self.ds = self.ds.transpose('basedate', 'validate', 'level', 'y', 'x')
+        # self.ds = self.ds.transpose('basedate', 'validate', 'level', 'y', 'x')
 
 
 def _check_lists_are_equal(list_a, list_b):
