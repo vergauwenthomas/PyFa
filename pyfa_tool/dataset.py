@@ -605,9 +605,9 @@ class FaDataset():
 
         #to make shure itereative reprojection is possible
         if 'lat' in self.ds.coords:
-            self.ds = self.ds.rename({'lat': 'y'})
+            self.ds = self.ds.drop_vars('lat')
         if 'lon' in self.ds.coords:
-            self.ds = self.ds.rename({'lon': 'x'})
+            self.ds = self.ds.drop_vars('lon')
 
 
 
