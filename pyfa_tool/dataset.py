@@ -11,6 +11,7 @@ import sys
 from collections.abc import Iterable
 import subprocess
 import pandas as pd
+import numpy as np
 import xarray as xr
 import rioxarray #Do not remove this import!
 
@@ -491,6 +492,94 @@ class FaDataset():
         print('netCDF loaded.')
 
 
+    def convert_2d_crossections_to_3d_variables(self):
+        """ Convert 2D crossections to full 3D fields.
+
+        This method will scan the variables for those that represent a level-
+        crossection (starts with Sxxx). Then the two dimensonal array is converted
+        to a 3D array, and stored as a xarrayDataarray added to the ds attribute.
+
+        Levels that are not available are filled with Nan's (thus the size of
+        data increases!).
+
+        The basename of the fields are used for the 3D field, and the 2D
+        crossection fields are removed.
+
+        Returns
+        -------
+        None.
+
+        """
+
+        ds = self.ds
+
+
+        nlevels = ds.attrs['nlev']
+        lvls = list(range(1, nlevels+1))
+
+        # get a list of all variable that are pseudofield (are defined at a specific modellevel)
+
+        all_variables = [var for var in ds.variables if var not in ds.dims]
+        pseudo_vars = [var for var in all_variables if (var.startswith('S') & var[1:3].isnumeric())]
+        pseudo_basenames = list(set([var[4:].strip() for var in pseudo_vars]))
+
+        for basename in pseudo_basenames:
+            print(basename)
+            # If basename already present than skip (we assume that the basename
+            # contains all the data)
+            if basename in all_variables:
+                print(f'WARNING: {basename} is already a field and will not be the target of pseudo fields.')
+                continue
+
+            # get all pseudovars for this basename
+            cur_pseudo_vars = [var for var in pseudo_vars if var[4:].strip() == basename]
+            cur_levels = [int(var[1:4]) for var in cur_pseudo_vars]
+
+            datalist = [ds[field].data for field in cur_pseudo_vars]
+
+            #Construct a 3 dimensional numpy array with the 2d slices at the right posisiton
+            datash = (ds.attrs['nlev'], *datalist[0].shape)
+            trg = np.zeros(shape=(ds.attrs['nlev'], *datalist[0].shape))
+            trg[trg == 0] = np.nan
+
+            zipped = list(zip(datalist, cur_levels))
+            for lvldata, lvl in zipped:
+                #overwrite the specific level
+                #(-1 because the levels 'starts' at 1 an not at 0)
+                trg[lvl-1,:,:] = lvldata #choose trivial lvl
+
+            # Get a dummy crossection for dimensions defenitions
+            dummy = ds[cur_pseudo_vars[0]]
+
+            #assigning dimensions
+            trgdims = list(dummy.dims)
+            trgdims.insert(0,'lvl')
+
+            #assigning coordinate
+            trgcoords = dummy.coords
+
+            #create dataaray
+            field = xr.DataArray(data=trg,
+                                 coords=trgcoords,
+                                 dims=trgdims,
+                                 name=None,
+                                 attrs=None,
+                                 indexes=None,
+                                 fastpath=False)
+            #add lvl coordinate
+            field = field.assign_coords({'lvl': lvls})
+
+
+            #add to dataset
+            ds[basename] = field
+
+
+            #drop 2d slices as fields
+            ds = ds.drop_vars(cur_pseudo_vars, errors='ignore')
+
+
+        self.ds = ds
+
     # =============================================================================
     # Data manipulation
     # =============================================================================
@@ -536,7 +625,8 @@ class FaDataset():
             ds = ds.assign_coords({'basedate': self.ds.coords['basedate'].data})
 
         if target_epsg=='EPSG:4326':
-            ds = ds.rename({'x': 'lon', 'y': 'lat'})
+            #add a lat and lon coordinate (just a copy of x an y coordinats for sel convenience)
+            ds = ds.assign_coords({'lat': ds['y'], 'lon': ds['x']})
 
 
 
@@ -597,14 +687,14 @@ class FaDataset():
 
         if self._is_3d_field(variable):
             assert not (level is None), f'{variable} is a 3D field. Specify a level.'
-            xarr = self.ds[variable].sel(level=level)
+            xarr = self.ds[variable].sel(lvl=level)
         elif self._is_2d_field(variable):
             xarr = self.ds[variable]
         else:
             sys.exit('something unforseen is wrong.')
 
         # setup default values for coastline and land features
-        islatlon = self. _in_latlon()
+        islatlon = self._in_latlon()
         if land is None:
             if islatlon:
                 land=True
@@ -742,10 +832,6 @@ class FaDataset():
     def _clean(self):
         # make sure the validate and basedate are dimensions with coordinates
         self._set_time_dimensions()
-        # Convert pseudo 3d fields to 3d fields
-        # self._format_pseudo_3d_fields()
-        # Fix dimension order
-        # self.ds = self.ds.transpose('y', 'x', 'level', 'validate', 'basedate')
 
 
     def field_exist(self, fieldname):
@@ -781,7 +867,7 @@ class FaDataset():
         """ Check if a dataset is in latitude-longitude spatial coordinates."""
         if self.ds is None:
             return False #data does not exist at all
-        if str(self.ds.rio.crs) == 'EPSG:4326':
+        if "proj=longlat" in self.ds.attrs['proj4str']:
             return True
         else:
             return False

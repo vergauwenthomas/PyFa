@@ -50,13 +50,12 @@ def reproject(dataset, target_epsg='EPSG:4326', nodata=-999):
     #dimensions and coordinate must have the same name
     # for rioxarray !!!!!!!!
 
-    dataset = dataset.rename({'xdim': 'x', 'ydim': 'y'})
-    dataset = dataset.rio.set_spatial_dims('x', 'y')
+    # dataset = dataset.rio.set_spatial_dims('x', 'y')
 
 
     #rasterio requires y, x as last dims
-    if 'zdim' in dataset.dims:
-        dataset = dataset.transpose('validate', 'basedate','zdim', 'y', 'x')
+    if 'lvl' in dataset.dims:
+        dataset = dataset.transpose('validate', 'basedate','lvl', 'y', 'x')
     else:
         dataset = dataset.transpose('validate', 'basedate', 'y', 'x')
 
@@ -74,5 +73,4 @@ def reproject(dataset, target_epsg='EPSG:4326', nodata=-999):
     if 'spatial_ref' in list(dataset.variables):
         dataset = dataset.drop_vars('spatial_ref')
 
-    dataset = dataset.rename_dims({'x': 'xdim', 'y': 'ydim'})
     return dataset

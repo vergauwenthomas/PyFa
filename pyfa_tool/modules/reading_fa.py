@@ -70,21 +70,20 @@ ncpath = "/home/thoverga/Documents/github/PyFa-tool/development/tmp_fajson/FA.nc
 def read_and_format_nc(ncpath):
     #open the nc file
     ds = xr.open_dataset(filename_or_obj=ncpath, engine='netcdf4')
+    ds = ds.rename({'xdim': 'x',
+                    'ydim': 'y',
+                    })
 
     if 'zdim' not in ds.coords:
-        ds = ds.rename_vars({'xdim': 'x',
-                             'ydim': 'y',
-                                })
         # Set dimension order (this is a convention (rioxarray likes the spatial coordiantes as last))
-        ds = ds.transpose('ydim', 'xdim')
+        ds = ds.transpose('y', 'x')
 
     else:
-        ds['zdim'] = ds['zdim'].astype(np.int64) #typecast to integer
-        ds = ds.rename_vars({'xdim': 'x',
-                              'ydim': 'y',
-                              'zdim': 'lvl'})
+        ds = ds.rename({'zdim':'lvl'})
+        ds['lvl'] = ds['lvl'].astype(np.int64) #typecast to integer
+
         # Set dimension order (this is a convention (rioxarray likes the spatial coordiantes as last))
-        ds = ds.transpose('zdim', 'ydim', 'xdim')
+        ds = ds.transpose('lvl', 'y', 'x')
 
 
     # Set nodata val
