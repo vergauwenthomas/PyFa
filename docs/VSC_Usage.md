@@ -12,13 +12,7 @@ echo R_LIBS=/dodrio/scratch/projects/starting_2022_075/accord/software/R-libs >>
 #### Load environment
 Load the correct environments.
 ```bash
-#Load the modules
-module load Python/3.10.4-GCCcore-11.3.0 
-module load Tkinter/3.10.4-GCCcore-11.3.0
-module load GDAL/3.5.0-foss-2022a
-module load R/4.2.1-foss-2022a
-#Activate the virtual-env for pyfa
-source /dodrio/scratch/projects/starting_2022_075/Software/PyFa/pyfa_env/bin/activate
+source /dodrio/scratch/projects/starting_2022_075/Software/PyFa/PyFa/docs/pyfa_on_vsc_setup.sh
 ```
 #### Add PyFa to your .bashrc
 ```bash
@@ -42,27 +36,13 @@ alias pyfa="source ${PYFA_BASH} "$@""
 ### Recurring usage
 Load the modules and the v-env. After that you are good to go.
 ```bash
-#Load the modules
-module load Python/3.10.4-GCCcore-11.3.0 
-module load Tkinter/3.10.4-GCCcore-11.3.0
-module load GDAL/3.5.0-foss-2022a
-module load R/4.2.1-foss-2022a
-
-#Load the v-env
-source /dodrio/scratch/projects/starting_2022_075/Software/PyFa/pyfa_env/bin/activate
+source /dodrio/scratch/projects/starting_2022_075/Software/PyFa/PyFa/docs/pyfa_on_vsc_setup.sh
 ```
 
 This could be simplified by adding the following into your .bashrc manually.
 ```bash
-function pyfa_env() {
-        #Load the modules
-		module load Python/3.10.4-GCCcore-11.3.0 
-		module load Tkinter/3.10.4-GCCcore-11.3.0
-		module load GDAL/3.5.0-foss-2022a
-		module load R/4.2.1-foss-2022a
-
-        #Load the v-env
-        source /dodrio/scratch/projects/starting_2022_075/Software/PyFa/pyfa_env/bin/activate
+function pyfa_env(){
+    source /dodrio/scratch/projects/starting_2022_075/Software/PyFa/PyFa/docs/pyfa_on_vsc_setup.sh	
 }
 ```
 #### Clear the working environment

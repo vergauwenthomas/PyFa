@@ -11,9 +11,11 @@ import os
 import sys
 import shutil
 import argparse
+from pathlib import Path
 
-main_path = os.path.dirname(__file__)
-sys.path.append(main_path)
+main_path = Path(__file__).parents[1].resolve()
+sys.path.append(str(main_path))
+
 
 
 if __name__ == "__main__":
@@ -80,7 +82,9 @@ The following functionality is available:
     import pyfa_tool as pyfa
     # from pyfa_tool.modules import plotting
     import matplotlib.pyplot as plt
+    import numpy as np
     from pathlib import Path
+
 
     # =============================================================================
     # Check arguments
@@ -177,6 +181,8 @@ The following functionality is available:
             assert pyfa.modules.IO.check_file_exist(fa_file), f'{file_expr} not found.' #Overkill?
 
 
+    if np.array(['whitelist' in faP for faP in matching_paths]).any():
+        print("WARNING: could it be that you added a whitelist without the '--' prefix?")
 
 
     # =============================================================================
@@ -184,6 +190,7 @@ The following functionality is available:
     # =============================================================================
     if args.describe:
         if is_fafile:
+            fa_file = os.path.join(os.getcwd(), fa_file)
             FA = pyfa.FaFile(fa_file)
             FA.describe()
         else:
