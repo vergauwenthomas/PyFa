@@ -91,7 +91,7 @@ The following functionality is available:
     #construct whitelist
     whitelist = args.whitelist
     if whitelist != "":
-        whitelist = str(args.whitelist).replace(' ', '').split(',')
+        whitelist = str(args.whitelist).split(',').strip()
     else:
         whitelist = []
 
