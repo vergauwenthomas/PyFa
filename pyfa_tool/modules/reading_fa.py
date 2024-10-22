@@ -19,6 +19,18 @@ from pyfa_tool.modules.describe_module import _str_to_dt
 # Formatters
 # =============================================================================
 
+def _int_format(input_int):
+    """ Format raw intput to an integer """
+    try:
+        integer = int(input_int)
+    except ValueError:
+        # One valid option is an empty string 
+        if str(input_int) == "":
+            integer= -999 #Is this a good choice?
+        else: 
+            sys.exit(f'Could not convert {input_int} to an int.')
+    return integer
+
 def _create_proj4_str(metadict):
     proj4str = f'+proj={metadict["projection"][0]} +lat_1={metadict["lat_1"][0]} +lat_2={metadict["lat_2"][0]} ' + \
         f'+lon_0={metadict["lon_0"][0]} +R={metadict["proj_R"][0]}'
@@ -65,7 +77,7 @@ def json_to_full_dataset(jsonfile):
         'validate': _str_to_dt(data['pyfa_metadata']['validate'][0]),
         'leadtime': timedelta(hours = float(data['pyfa_metadata']['leadtime'][0])),
 
-        'timestep': int(data['pyfa_metadata']['timestep'][0]),
+        'timestep': _int_format(data['pyfa_metadata']['timestep'][0]),
         'origin': str(data['pyfa_metadata']['origin'][0]),
 
         'projection': _create_proj4_str(data['pyfa_metadata']),
