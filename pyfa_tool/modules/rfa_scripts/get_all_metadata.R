@@ -47,7 +47,11 @@ sink()
 
 #Extract all fieldnames
 fieldnames = x$list$name
-dummy_field = avail_fields$name[avail_fields$length == max(avail_fields$length)][1]
+if ("SFX.XX" %in% sapply(fieldnames, trimws)){
+	dummy_field="SFX.XX" #alway use the same regular field as dummy if present
+}else{
+	dummy_field = avail_fields$name[avail_fields$length == max(avail_fields$length)][1]
+}
 
 y = FAdec(x, dummy_field)
 
