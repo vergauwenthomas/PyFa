@@ -195,15 +195,6 @@ def _str_to_dt(strdatetime):
         sys.exit(f'Could not format {strdatetime} to a datetime')
     return dtrep
 
-# def _str_to_dt(strdatetime):
-#     """Format datetimes to string."""
-#     if len(strdatetime) == 19:
-#         return datetime.strptime(strdatetime, '%Y-%m-%d %H:%M:%S')
-#     elif len(strdatetime) == 10:
-#         return datetime.strptime(strdatetime, '%Y-%m-%d')
-#     else:
-#         sys.exit(f'could not format {strdatetime} to a datetime')
-
 
 def _format_2d_field(fielddict):
     """Text representation of a 2d field."""
