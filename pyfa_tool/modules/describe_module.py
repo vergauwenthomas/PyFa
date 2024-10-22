@@ -174,14 +174,26 @@ Number of fields        : {d['nfields']}
 # Text formatters
 # =============================================================================
 
+
 def _str_to_dt(strdatetime):
-    """Format datetimes to string."""
-    if len(strdatetime) == 19:
-        return datetime.strptime(strdatetime, '%Y-%m-%d %H:%M:%S')
-    elif len(strdatetime) == 10:
-        return datetime.strptime(strdatetime, '%Y-%m-%d')
-    else:
-        sys.exit(f'could not format {strdatetime} to a datetime')
+    """Format datetimes from string."""
+
+    known_used_formats = ['%Y-%m-%d %H:%M:%S', #CY43
+                          '%Y-%m-%d', #cy43t2 clim files
+                          '%d-%m-%y', #deode clim files 
+                          ]
+    found=False
+    for test_fmt in known_used_formats:
+        try:
+            dtrep = datetime.strptime(strdatetime, test_fmt)
+            found=True
+            break
+        except ValueError:
+           continue
+       
+    if not found:
+        sys.exit(f'Could not format {strdatetime} to a datetime')
+    return dtrep
 
 
 def _format_2d_field(fielddict):
